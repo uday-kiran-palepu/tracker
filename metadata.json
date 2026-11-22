@@ -1,0 +1,8 @@
+{
+  "name": "Uni Tracker",
+  "description": "Project Tracker for NxtWave centers and campuses across India with Google Sheets integration and Role-Based Access Control",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
