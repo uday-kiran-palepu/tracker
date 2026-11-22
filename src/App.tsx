@@ -112,38 +112,58 @@ export default function App() {
   const [editManpowerModalOpen, setEditManpowerModalOpen] = useState(false);
   const [manpowerToEdit, setManpowerToEdit] = useState<ManpowerItem | null>(null);
 
-  // Startup: Load and sync live data from Cloud Database if configured
-  useEffect(() => {
-    const loadData = async () => {
-      setIsSyncing(true);
-      try {
-        const result = await api.fetchAllData();
-        setProjects(result.Projects);
-        setDayWiseReports(result.DayWiseReports);
-        setDayWisePhotos(result.DayWisePhotos);
-        setExecutionStages(result.ExecutionStages);
-        setMaterials(result.Materials);
-        setManpower(result.Manpower);
-        setApprovals(result.Approvals);
-        setDocuments(result.Documents);
+  // Core data sync function with silent background mode support
+  const syncData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setIsSyncing(true);
+    try {
+      const result = await api.fetchAllData();
+      setProjects(result.Projects);
+      setDayWiseReports(result.DayWiseReports);
+      setDayWisePhotos(result.DayWisePhotos);
+      setExecutionStages(result.ExecutionStages);
+      setMaterials(result.Materials);
+      setManpower(result.Manpower);
+      setApprovals(result.Approvals);
+      setDocuments(result.Documents);
 
-        setIsConnected(api.isConfigured());
-        setLastSyncTime(api.getLastSyncTime());
-        setAppName(api.getAppName());
+      setIsConnected(api.isConfigured());
+      setLastSyncTime(api.getLastSyncTime());
+      setAppName(api.getAppName());
 
-        if (api.isConfigured()) {
-          showToast('success', 'Connected and synced with Cloud Database.', 'Live Backend Active');
-        }
-      } catch (err: any) {
-        console.warn('Initial live sync error:', err);
-        showToast('info', 'Loaded from local cache. (Demo Mode)', 'System Ready');
-      } finally {
-        setIsSyncing(false);
+      if (!isSilent && api.isConfigured()) {
+        showToast('success', 'Connected and synced with Cloud Database.', 'Live Backend Active');
       }
-    };
-
-    loadData();
+    } catch (err: any) {
+      console.warn('Sync error:', err);
+      if (!isSilent) {
+        showToast('info', 'Loaded from local cache. (Demo Mode)', 'System Ready');
+      }
+    } finally {
+      if (!isSilent) setIsSyncing(false);
+    }
   }, [showToast]);
+
+  // App Startup & Silent Background Auto-Sync
+  useEffect(() => {
+    // 1. Immediately fetch live data on app startup
+    syncData(false);
+
+    // 2. Re-sync automatically when browser tab regains focus
+    const handleFocus = () => {
+      syncData(true);
+    };
+    window.addEventListener('focus', handleFocus);
+
+    // 3. Silent background auto-sync every 60 seconds
+    const intervalId = setInterval(() => {
+      syncData(true);
+    }, 60000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(intervalId);
+    };
+  }, [syncData]);
 
   // Save changes to local storage when state updates
   useEffect(() => {

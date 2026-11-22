@@ -10,6 +10,7 @@ import {
 import { formatDate } from '../utils/date';
 
 const STORAGE_KEYS = {
+  DB_URL: 'uni_tracker_db_url',
   WEB_APP_URL: 'unitracker_webapp_url',
   PROJECTS: 'unitracker_projects',
   DAY_WISE_REPORTS: 'unitracker_day_wise_reports',
@@ -23,6 +24,8 @@ const STORAGE_KEYS = {
   LAST_SYNC_TIME: 'unitracker_last_sync_time',
   APP_NAME: 'unitracker_app_name'
 };
+
+const DEFAULT_DB_URL = import.meta.env.VITE_APPS_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbyZvYQnOg0eMvh8PUgCI2vCUL8kmfvb8rSlu0ASMtdwiDa7e5YNcFomf4vadDP8HNMfCg/exec";
 
 export interface UploadPhotoPayload {
   projectId: string;
@@ -62,22 +65,45 @@ export const api = {
   },
 
   /**
-   * Get the saved Database Web App URL from localStorage or environment
+   * Get the saved Database Web App URL from localStorage or permanent default
    */
+  getScriptUrl(): string {
+    return localStorage.getItem("uni_tracker_db_url") || localStorage.getItem(STORAGE_KEYS.WEB_APP_URL) || DEFAULT_DB_URL;
+  },
+
   getWebAppUrl(): string {
-    const stored = localStorage.getItem(STORAGE_KEYS.WEB_APP_URL);
-    if (stored && stored.trim().length > 0) {
-      return stored.trim();
-    }
-    const envUrl = (import.meta as any).env?.VITE_APPS_SCRIPT_URL || '';
-    return envUrl ? envUrl.trim() : '';
+    return this.getScriptUrl();
   },
 
   /**
    * Set and persist the Database Web App URL
    */
   setWebAppUrl(url: string) {
-    localStorage.setItem(STORAGE_KEYS.WEB_APP_URL, url.trim());
+    if (url && url.trim()) {
+      localStorage.setItem("uni_tracker_db_url", url.trim());
+      localStorage.setItem(STORAGE_KEYS.WEB_APP_URL, url.trim());
+    } else {
+      localStorage.removeItem("uni_tracker_db_url");
+      localStorage.removeItem(STORAGE_KEYS.WEB_APP_URL);
+    }
+  },
+
+  setScriptUrl(url: string) {
+    this.setWebAppUrl(url);
+  },
+
+  /**
+   * Reset to permanent default database URL and wipe custom override
+   */
+  resetToDefaultDbUrl(): string {
+    localStorage.removeItem("uni_tracker_db_url");
+    localStorage.removeItem(STORAGE_KEYS.WEB_APP_URL);
+    this.clearCache();
+    return DEFAULT_DB_URL;
+  },
+
+  getDefaultDbUrl(): string {
+    return DEFAULT_DB_URL;
   },
 
   /**

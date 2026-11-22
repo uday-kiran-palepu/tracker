@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Settings, Link as LinkIcon, CheckCircle2, AlertCircle, RefreshCw, 
   Code, ShieldCheck, UserCircle, ExternalLink, Copy, Check, Database, 
-  Sparkles, Lock, Trash2, Smartphone, Save, Eye 
+  Sparkles, Lock, Trash2, Smartphone, Save, Eye, RotateCcw 
 } from 'lucide-react';
 import { User } from '../types';
 import { api } from '../services/api';
@@ -132,6 +132,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
+  const handleResetToDefault = async () => {
+    const defaultUrl = api.resetToDefaultDbUrl();
+    setUrlInput(defaultUrl);
+    setSyncFeedback(null);
+    try {
+      const ok = await onSaveAndSync(defaultUrl);
+      if (ok) {
+        setSyncFeedback({
+          status: 'success',
+          message: 'Reset to permanent default Cloud Database URL and successfully synced!'
+        });
+      }
+    } catch (err: any) {
+      setSyncFeedback({
+        status: 'error',
+        message: err.message || 'Failed to sync with default database'
+      });
+    }
+  };
+
   const handleClearCacheAndResync = async () => {
     if (confirm('Clear local database cache and perform a clean re-sync from your connected Cloud Database?')) {
       api.clearCache();
@@ -210,6 +230,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>{isSyncing ? 'Syncing...' : 'Save & Sync Now'}</span>
             </button>
+            <button
+              type="button"
+              onClick={handleResetToDefault}
+              disabled={isSyncing}
+              className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all shrink-0 flex items-center justify-center gap-1.5 border border-slate-200"
+              title="Reset to permanent default Cloud Database URL"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+              <span>Reset to Default</span>
+            </button>
           </div>
 
           {/* Sync Status Banner */}
@@ -281,7 +311,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-0.5">Plug & Play Database Cache</h4>
             <p className="text-xs text-slate-500">Connecting to a brand-new database? Clear local cached records to immediately pull fresh schema tables.</p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleResetToDefault}
+              disabled={isSyncing}
+              className="px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold transition-all border border-emerald-200 flex items-center gap-1.5"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset to Default Database</span>
+            </button>
             <button
               type="button"
               onClick={handleClearCacheAndResync}
