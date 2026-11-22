@@ -2,7 +2,6 @@ import { api } from './api';
 import {
   Project, ExecutionStageItem, MaterialItem, ManpowerItem, ApprovalItem, DocumentItem, PhotoItem, SiteUpdateItem, User, DayWisePhoto, DayWiseReport
 } from '../types';
-import { INITIAL_USERS } from '../data/seedData';
 
 /**
  * Backward compatibility adapter that connects to the new unified API service.
@@ -157,7 +156,7 @@ export const sheetService = {
         await api.deleteRecord(sheetName, idValue || item[idField]);
       }
     } catch (e) {
-      console.error(`Failed to sync ${sheetName} to Google Sheet:`, e);
+      console.error(`Failed to sync ${sheetName} to Database:`, e);
     }
   },
 

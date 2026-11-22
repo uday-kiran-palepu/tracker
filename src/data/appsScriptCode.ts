@@ -50,11 +50,22 @@ var SCHEMA = {
 
 var DRIVE_FOLDER_NAME = 'UniTracker_Storage';
 
+function getTargetSpreadsheet() {
+  var props = PropertiesService.getScriptProperties();
+  var customId = props.getProperty('ACTIVE_SPREADSHEET_ID');
+  if (customId) {
+    try {
+      return SpreadsheetApp.openById(customId);
+    } catch(e) {}
+  }
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
+
 /**
  * GET Handler: Fetches all data across all database tables
  */
 function doGet(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getTargetSpreadsheet();
   var result = {};
 
   try {
@@ -97,6 +108,12 @@ function doGet(e) {
     }
     result.AppSettings = settingsMap;
 
+    result.DatabaseMeta = {
+      name: ss.getName(),
+      id: ss.getId(),
+      sheetUrl: ss.getUrl()
+    };
+
     return ContentService.createTextOutput(JSON.stringify({
       status: 'success',
       data: result,
@@ -112,15 +129,53 @@ function doGet(e) {
 }
 
 /**
- * POST Handler: Handles create, update, delete, login, verifyPassword, uploadPhoto, uploadDocument
+ * POST Handler: Handles create, update, delete, login, verifyPassword, uploadPhoto, uploadDocument, switchDatabase
  */
 function doPost(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getTargetSpreadsheet();
 
   try {
     var contents = e.postData.contents;
     var payload = JSON.parse(contents);
     var action = payload.action;
+
+    // 0. ACTION: SWITCH DATABASE (GLOBAL SERVER-SIDE SWITCHER)
+    if (action === 'switchDatabase') {
+      var pwd = (payload.password || '').trim();
+      if (pwd !== 'admin123' && pwd !== 'admin') {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          message: 'Invalid coordinator password. Database switch denied.'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      var input = (payload.sheetUrl || '').trim();
+      var sheetId = input;
+      var match = input.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (match && match[1]) {
+        sheetId = match[1];
+      }
+
+      var targetSs = SpreadsheetApp.openById(sheetId);
+      var newDbName = targetSs.getName();
+
+      // Ensure all schema tabs exist on target database
+      Object.keys(SCHEMA).forEach(function(sName) {
+        var sh = targetSs.getSheetByName(sName);
+        if (!sh) {
+          sh = targetSs.insertSheet(sName);
+          sh.appendRow(SCHEMA[sName]);
+        }
+      });
+
+      PropertiesService.getScriptProperties().setProperty('ACTIVE_SPREADSHEET_ID', sheetId);
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        databaseName: newDbName,
+        message: 'Global active database switched to: ' + newDbName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
 
     // 1. ACTION: LOGIN
     if (action === 'login') {

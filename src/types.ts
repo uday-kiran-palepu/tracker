@@ -202,6 +202,13 @@ export interface AppSettings {
   appName?: string;
 }
 
+export interface DatabaseMeta {
+  name?: string;
+  id?: string;
+  sheetUrl?: string;
+  lastSwitched?: string;
+}
+
 export interface AllDataResponse {
   Projects: Project[];
   DayWiseReports: DayWiseReport[];
@@ -212,4 +219,5 @@ export interface AllDataResponse {
   Approvals: ApprovalItem[];
   Documents: DocumentItem[];
   AppSettings?: AppSettings;
+  DatabaseMeta?: DatabaseMeta;
 }

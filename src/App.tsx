@@ -18,13 +18,13 @@ import {
   EditDayWiseReportModal, AddExecutionStageModal, EditExecutionStageModal,
   AddManpowerModal, EditManpowerModal
 } from './components/Modals';
+import { Building2, RefreshCw } from 'lucide-react';
 
 import { 
   Project, ExecutionStageItem, MaterialItem, ManpowerItem, ApprovalItem, 
-  DocumentItem, PhotoItem, SiteUpdateItem, User, DayWiseReport, DayWisePhoto 
+  DocumentItem, PhotoItem, SiteUpdateItem, User, DayWiseReport, DayWisePhoto, DatabaseMeta 
 } from './types';
 import { api } from './services/api';
-import { INITIAL_SITE_UPDATES } from './data/seedData';
 
 export default function App() {
   // Navigation & Landing View State
@@ -35,10 +35,12 @@ export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [orgName, setOrgName] = useState('NxtWave (Flagship)');
 
-  // Live Backend & Sync State
-  const [isConnected, setIsConnected] = useState<boolean>(api.isConfigured());
+  // Live Backend & Loading State
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>(api.getLastSyncTime());
+  const [databaseMeta, setDatabaseMeta] = useState<DatabaseMeta>({ name: 'Main Execution Database' });
 
   // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -48,7 +50,7 @@ export default function App() {
     setToasts((prev) => [...prev, { id, type, message, title }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    }, 4500);
   }, []);
 
   const removeToast = useCallback((id: string) => {
@@ -60,25 +62,16 @@ export default function App() {
     document.title = `${appName} - Real-Time Campus Execution Tracker`;
   }, [appName]);
 
-  // Main 8 Database Tables State
-  const cached = api.getLocalCachedData();
-  const [projects, setProjects] = useState<Project[]>(cached.Projects);
-  const [dayWiseReports, setDayWiseReports] = useState<DayWiseReport[]>(cached.DayWiseReports);
-  const [dayWisePhotos, setDayWisePhotos] = useState<DayWisePhoto[]>(cached.DayWisePhotos);
-  const [executionStages, setExecutionStages] = useState<ExecutionStageItem[]>(cached.ExecutionStages);
-  const [materials, setMaterials] = useState<MaterialItem[]>(cached.Materials);
-  const [manpower, setManpower] = useState<ManpowerItem[]>(cached.Manpower);
-  const [approvals, setApprovals] = useState<ApprovalItem[]>(cached.Approvals);
-  const [documents, setDocuments] = useState<DocumentItem[]>(cached.Documents);
-
-  // Retain siteUpdates feed
-  const [siteUpdates, setSiteUpdates] = useState<SiteUpdateItem[]>(() => {
-    const stored = localStorage.getItem('unitracker_site_updates');
-    if (stored) {
-      try { return JSON.parse(stored); } catch (e) { /* ignore */ }
-    }
-    return INITIAL_SITE_UPDATES;
-  });
+  // Main 8 Database Tables State - strictly initialized as empty arrays
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [dayWiseReports, setDayWiseReports] = useState<DayWiseReport[]>([]);
+  const [dayWisePhotos, setDayWisePhotos] = useState<DayWisePhoto[]>([]);
+  const [executionStages, setExecutionStages] = useState<ExecutionStageItem[]>([]);
+  const [materials, setMaterials] = useState<MaterialItem[]>([]);
+  const [manpower, setManpower] = useState<ManpowerItem[]>([]);
+  const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [siteUpdates, setSiteUpdates] = useState<SiteUpdateItem[]>([]);
 
   // Selected project for detail view
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -117,28 +110,33 @@ export default function App() {
     if (!isSilent) setIsSyncing(true);
     try {
       const result = await api.fetchAllData();
-      setProjects(result.Projects);
-      setDayWiseReports(result.DayWiseReports);
-      setDayWisePhotos(result.DayWisePhotos);
-      setExecutionStages(result.ExecutionStages);
-      setMaterials(result.Materials);
-      setManpower(result.Manpower);
-      setApprovals(result.Approvals);
-      setDocuments(result.Documents);
+      setProjects(result.Projects || []);
+      setDayWiseReports(result.DayWiseReports || []);
+      setDayWisePhotos(result.DayWisePhotos || []);
+      setExecutionStages(result.ExecutionStages || []);
+      setMaterials(result.Materials || []);
+      setManpower(result.Manpower || []);
+      setApprovals(result.Approvals || []);
+      setDocuments(result.Documents || []);
 
-      setIsConnected(api.isConfigured());
+      if (result.DatabaseMeta) {
+        setDatabaseMeta(result.DatabaseMeta);
+      }
+
+      setIsConnected(true);
       setLastSyncTime(api.getLastSyncTime());
-      setAppName(api.getAppName());
 
-      if (!isSilent && api.isConfigured()) {
-        showToast('success', 'Connected and synced with Cloud Database.', 'Live Backend Active');
+      if (result.AppSettings?.appName) {
+        setAppName(result.AppSettings.appName);
       }
     } catch (err: any) {
-      console.warn('Sync error:', err);
+      console.warn('Live database sync error:', err);
+      setIsConnected(false);
       if (!isSilent) {
-        showToast('info', 'Loaded from local cache. (Demo Mode)', 'System Ready');
+        showToast('error', 'Could not connect to live database. Network offline.', 'Connection Error');
       }
     } finally {
+      setIsLoading(false);
       if (!isSilent) setIsSyncing(false);
     }
   }, [showToast]);
@@ -165,20 +163,6 @@ export default function App() {
     };
   }, [syncData]);
 
-  // Save changes to local storage when state updates
-  useEffect(() => {
-    api.cacheLocalData({
-      Projects: projects,
-      DayWiseReports: dayWiseReports,
-      DayWisePhotos: dayWisePhotos,
-      ExecutionStages: executionStages,
-      Materials: materials,
-      Manpower: manpower,
-      Approvals: approvals,
-      Documents: documents
-    });
-  }, [projects, dayWiseReports, dayWisePhotos, executionStages, materials, manpower, approvals, documents]);
-
   // Auth Handlers
   const handleLogin = (user: User) => {
     setCurrentUser(user);
@@ -192,30 +176,38 @@ export default function App() {
     showToast('info', 'Switched to Public View-Only Mode.', 'Logged Out');
   };
 
-  // Backend Save & Sync Now Handler (from Settings)
-  const handleSaveAndSync = async (newUrl: string): Promise<boolean> => {
+  // Switch Global Database Handler (from Settings)
+  const handleSwitchDatabase = async (sheetUrl: string, password: string): Promise<boolean> => {
     setIsSyncing(true);
-    api.setWebAppUrl(newUrl);
-
     try {
-      const result = await api.fetchAllData();
-      setProjects(result.Projects);
-      setDayWiseReports(result.DayWiseReports);
-      setDayWisePhotos(result.DayWisePhotos);
-      setExecutionStages(result.ExecutionStages);
-      setMaterials(result.Materials);
-      setManpower(result.Manpower);
-      setApprovals(result.Approvals);
-      setDocuments(result.Documents);
+      const res = await api.switchGlobalDatabase(sheetUrl, currentUser.username || 'coordinator', password);
+      if (res && res.status === 'success') {
+        // Clear state immediately
+        setProjects([]);
+        setDayWiseReports([]);
+        setDayWisePhotos([]);
+        setExecutionStages([]);
+        setMaterials([]);
+        setManpower([]);
+        setApprovals([]);
+        setDocuments([]);
+        api.clearCache();
 
-      setIsConnected(true);
-      const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      setLastSyncTime(nowTime);
+        // Fetch fresh data from newly switched database
+        await syncData(false);
 
-      showToast('success', 'Synced all campuses, reports, and files from Cloud Database!', 'Database Connected');
-      return true;
+        showToast(
+          'success',
+          `Global database switched to ${res.databaseName || 'new database'}. All devices will now sync with this database.`,
+          'Database Switched'
+        );
+        return true;
+      } else {
+        showToast('error', res?.message || 'Failed to switch database.', 'Switch Error');
+        return false;
+      }
     } catch (err: any) {
-      showToast('error', err.message || 'Failed to connect to Database Web App', 'Connection Error');
+      showToast('error', err.message || 'Error occurred while switching database.', 'Connection Error');
       return false;
     } finally {
       setIsSyncing(false);
@@ -532,6 +524,27 @@ export default function App() {
     }
   };
 
+  // Startup Loading Spinner
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-[#0B1528] flex flex-col items-center justify-center text-white p-6 z-50 select-none">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
+            <Building2 className="w-6 h-6 text-blue-400 animate-pulse" />
+          </div>
+          <span className="text-xl font-black tracking-tight text-white">{appName}</span>
+        </div>
+        <div className="flex items-center gap-3 text-sm text-slate-300 font-medium">
+          <RefreshCw className="w-5 h-5 text-blue-400 animate-spin" />
+          <span>Connecting to live database & syncing campus records...</span>
+        </div>
+        <div className="mt-5 w-56 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+          <div className="h-full bg-blue-500 rounded-full animate-pulse w-3/4" />
+        </div>
+      </div>
+    );
+  }
+
   // If initial landing screen is visible, render Full-Screen Landing Homepage
   if (showLanding) {
     return (
@@ -720,13 +733,15 @@ export default function App() {
                   onOpenLogin={() => setLoginModalOpen(true)}
                   onLogout={handleLogout}
                   onOpenAppsScriptModal={() => setAppsScriptModalOpen(true)}
-                  onSaveAndSync={handleSaveAndSync}
                   isSyncing={isSyncing}
                   isConnected={isConnected}
                   lastSyncTime={lastSyncTime}
                   appName={appName}
                   onUpdateAppName={(name) => setAppName(name)}
                   onUpdateCurrentUser={(u) => setCurrentUser(u)}
+                  databaseMeta={databaseMeta}
+                  onSwitchDatabase={handleSwitchDatabase}
+                  onRefreshData={() => syncData(false)}
                 />
               )}
             </>

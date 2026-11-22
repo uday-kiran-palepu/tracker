@@ -1,25 +1,25 @@
 import React, { useState } from 'react';
 import { 
-  Settings, Link as LinkIcon, CheckCircle2, AlertCircle, RefreshCw, 
-  Code, ShieldCheck, UserCircle, ExternalLink, Copy, Check, Database, 
-  Sparkles, Lock, Trash2, Smartphone, Save, Eye, RotateCcw 
+  Settings, CheckCircle2, AlertCircle, RefreshCw, 
+  Code, ShieldCheck, UserCircle, ExternalLink, Database, 
+  Sparkles, Lock, Save, ArrowRight, Layers, Check 
 } from 'lucide-react';
-import { User } from '../types';
-import { api } from '../services/api';
-import { PasswordPromptModal } from './Modals';
+import { User, DatabaseMeta } from '../types';
 
 interface SettingsViewProps {
   currentUser: User;
   onOpenLogin: () => void;
   onLogout: () => void;
   onOpenAppsScriptModal: () => void;
-  onSaveAndSync: (url: string) => Promise<boolean>;
   isSyncing: boolean;
   isConnected: boolean;
   lastSyncTime: string;
   appName: string;
   onUpdateAppName: (name: string) => void;
   onUpdateCurrentUser: (user: User) => void;
+  databaseMeta: DatabaseMeta;
+  onSwitchDatabase: (sheetUrl: string, password: string) => Promise<boolean>;
+  onRefreshData: () => Promise<void>;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -27,18 +27,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onOpenLogin,
   onLogout,
   onOpenAppsScriptModal,
-  onSaveAndSync,
   isSyncing,
   isConnected,
   lastSyncTime,
   appName,
   onUpdateAppName,
-  onUpdateCurrentUser
+  onUpdateCurrentUser,
+  databaseMeta,
+  onSwitchDatabase,
+  onRefreshData
 }) => {
-  const [urlInput, setUrlInput] = useState(api.getWebAppUrl());
-  const [syncFeedback, setSyncFeedback] = useState<{ status: 'success' | 'error'; message: string } | null>(null);
-  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
-  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+  const isCoordinator = currentUser.role === 'Project Coordinator';
+
+  // Switch Database form state (Coordinator only)
+  const [sheetUrlInput, setSheetUrlInput] = useState('');
+  const [switchPassword, setSwitchPassword] = useState('');
+  const [isSwitching, setIsSwitching] = useState(false);
+  const [switchFeedback, setSwitchFeedback] = useState<{ status: 'success' | 'error'; message: string } | null>(null);
 
   // App Name state
   const [appNameInput, setAppNameInput] = useState(appName);
@@ -50,118 +55,69 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [profileRole, setProfileRole] = useState<User['role']>(currentUser.role);
   const [profileFeedback, setProfileFeedback] = useState<string | null>(null);
 
-  const isCoordinator = currentUser.role === 'Project Coordinator';
+  const handleSwitchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSwitchFeedback(null);
 
-  const executeSync = async (targetUrl: string) => {
-    setSyncFeedback(null);
-    const trimmed = targetUrl.trim();
-    if (!trimmed) {
-      api.setWebAppUrl('');
-      setSyncFeedback({
-        status: 'error',
-        message: 'Database Web App URL cleared. Running in Offline Local Demo Mode.'
-      });
+    const trimmedUrl = sheetUrlInput.trim();
+    if (!trimmedUrl) {
+      setSwitchFeedback({ status: 'error', message: 'Please enter a valid Database link or spreadsheet ID.' });
       return;
     }
 
+    if (!switchPassword.trim()) {
+      setSwitchFeedback({ status: 'error', message: 'Coordinator password is required to switch database globally.' });
+      return;
+    }
+
+    setIsSwitching(true);
     try {
-      const ok = await onSaveAndSync(trimmed);
+      const ok = await onSwitchDatabase(trimmedUrl, switchPassword);
       if (ok) {
-        setSyncFeedback({
+        setSheetUrlInput('');
+        setSwitchPassword('');
+        setSwitchFeedback({
           status: 'success',
-          message: 'Successfully connected and live synced with Cloud Database!'
+          message: 'Active database successfully switched globally. All devices are now synchronized!'
         });
       } else {
-        setSyncFeedback({
+        setSwitchFeedback({
           status: 'error',
-          message: 'Failed to connect. Please verify the Web App is deployed with access set to "Anyone".'
+          message: 'Failed to switch database. Please verify the link, permissions ("Anyone with link"), and password.'
         });
       }
     } catch (err: any) {
-      setSyncFeedback({
+      setSwitchFeedback({
         status: 'error',
-        message: err.message || 'Connection failed'
+        message: err.message || 'Connection error while switching database.'
       });
+    } finally {
+      setIsSwitching(false);
     }
   };
 
-  const handleSyncClick = () => {
-    const trimmed = urlInput.trim();
-    // If URL is changed and user is logged in as Coordinator, ask for security confirmation
-    if (trimmed !== api.getWebAppUrl() && isCoordinator) {
-      setPendingUrl(trimmed);
-      setPasswordModalOpen(true);
-    } else {
-      executeSync(trimmed);
-    }
-  };
-
-  const handlePasswordVerified = () => {
-    if (pendingUrl !== null) {
-      executeSync(pendingUrl);
-      setPendingUrl(null);
-    }
-  };
-
-  const handleSaveAppName = async (e: React.FormEvent) => {
+  const handleSaveAppName = (e: React.FormEvent) => {
     e.preventDefault();
     const clean = appNameInput.trim() || 'Uni Tracker';
     setAppNameFeedback(null);
-    await api.updateAppSettings({ appName: clean });
     onUpdateAppName(clean);
     setAppNameFeedback('Application branding updated successfully!');
     setTimeout(() => setAppNameFeedback(null), 3500);
   };
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
+  const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     setProfileFeedback(null);
-    try {
-      const updated = await api.updateUser({
-        id: currentUser.id,
-        currentUsername: currentUser.username,
-        username: profileUsername.trim() || 'coordinator',
-        name: profileName.trim() || 'Coordinator',
-        role: profileRole
-      });
-      onUpdateCurrentUser(updated);
-      setProfileFeedback('User profile saved and synced!');
-      setTimeout(() => setProfileFeedback(null), 3500);
-    } catch (err: any) {
-      setProfileFeedback('Failed to update profile: ' + (err.message || 'Error'));
-    }
-  };
-
-  const handleResetToDefault = async () => {
-    const defaultUrl = api.resetToDefaultDbUrl();
-    setUrlInput(defaultUrl);
-    setSyncFeedback(null);
-    try {
-      const ok = await onSaveAndSync(defaultUrl);
-      if (ok) {
-        setSyncFeedback({
-          status: 'success',
-          message: 'Reset to permanent default Cloud Database URL and successfully synced!'
-        });
-      }
-    } catch (err: any) {
-      setSyncFeedback({
-        status: 'error',
-        message: err.message || 'Failed to sync with default database'
-      });
-    }
-  };
-
-  const handleClearCacheAndResync = async () => {
-    if (confirm('Clear local database cache and perform a clean re-sync from your connected Cloud Database?')) {
-      api.clearCache();
-      const currentUrl = api.getWebAppUrl();
-      if (currentUrl) {
-        await executeSync(currentUrl);
-      } else {
-        window.location.reload();
-      }
-    }
+    const updated: User = {
+      ...currentUser,
+      username: profileUsername.trim() || 'coordinator',
+      name: profileName.trim() || 'Coordinator',
+      role: profileRole,
+      email: `${profileUsername.trim() || 'coordinator'}@unitracker.com`
+    };
+    onUpdateCurrentUser(updated);
+    setProfileFeedback('User profile saved and synced!');
+    setTimeout(() => setProfileFeedback(null), 3500);
   };
 
   return (
@@ -169,8 +125,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {/* Header */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">System Settings & Cloud Database</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Manage live Cloud Database synchronization, app branding, and role permissions</p>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">System Settings & Database</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Global database synchronization, active cloud storage, and role permissions</p>
         </div>
 
         {/* Live Status Badge */}
@@ -181,209 +137,212 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <span>Live • Connected to Cloud Database</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 shadow-sm whitespace-nowrap shrink-0">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-              <span>Offline • Demo Mode (Local Storage)</span>
+            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 shadow-sm whitespace-nowrap shrink-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+              <span>Offline • Connection Error</span>
             </span>
           )}
         </div>
       </div>
 
-      {/* Cloud Database Backend Configuration */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
+      {/* Active Database Summary Card */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Database className="w-5 h-5 text-blue-600" />
-              <span>Cloud Database Web App URL</span>
+              <span>Active Connected Database</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Connect your deployed backend Web App to sync live projects, daily execution reports, and cloud document storage.
+              Current central cloud database serving live campus execution and daily reports globally across all clients.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onOpenAppsScriptModal}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold transition-all shrink-0 self-start sm:self-auto"
-          >
-            <Code className="w-4 h-4" />
-            <span>View Apps Script Code & Schema</span>
-          </button>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="url"
-              placeholder="https://script.google.com/macros/s/.../exec"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-800 focus:outline-none focus:border-blue-500 placeholder:text-slate-400"
-            />
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleSyncClick}
+              onClick={onRefreshData}
               disabled={isSyncing}
-              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-400 text-white text-xs font-semibold shadow-md shadow-blue-600/30 transition-all shrink-0 flex items-center justify-center gap-2"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-50 text-xs font-semibold transition-all shrink-0"
+              title="Force sync latest database records"
             >
-              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? 'Syncing...' : 'Save & Sync Now'}</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{isSyncing ? 'Refreshing...' : 'Force Refresh'}</span>
             </button>
-            <button
-              type="button"
-              onClick={handleResetToDefault}
-              disabled={isSyncing}
-              className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all shrink-0 flex items-center justify-center gap-1.5 border border-slate-200"
-              title="Reset to permanent default Cloud Database URL"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-              <span>Reset to Default</span>
-            </button>
-          </div>
 
-          {/* Sync Status Banner */}
-          {syncFeedback && (
-            <div className={`p-3.5 rounded-xl text-xs flex items-center gap-2.5 border ${
-              syncFeedback.status === 'success'
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                : 'bg-rose-50 text-rose-800 border-rose-200'
-            }`}>
-              {syncFeedback.status === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              ) : (
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              )}
-              <span>{syncFeedback.message}</span>
-            </div>
-          )}
-
-          {lastSyncTime && (
-            <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
-              <span>Last synced with Database:</span>
-              <span className="font-semibold text-slate-600">{lastSyncTime}</span>
-            </p>
-          )}
-        </div>
-
-        {/* Database Tables Reference */}
-        <div className="pt-4 border-t border-slate-100">
-          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Connected Database Tables</h4>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-              <span className="font-bold text-slate-800 block">Projects</span>
-              <span className="text-slate-500 text-[10px]">Campus metadata & progress</span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-              <span className="font-bold text-slate-800 block">DayWiseReports</span>
-              <span className="text-slate-500 text-[10px]">Daily logs & manpower</span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-              <span className="font-bold text-slate-800 block">DayWisePhotos</span>
-              <span className="text-slate-500 text-[10px]">Cloud Drive linked images</span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-              <span className="font-bold text-slate-800 block">ExecutionStages</span>
-              <span className="text-slate-500 text-[10px]">15-stage subtask lifecycle</span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-              <span className="font-bold text-slate-800 block">Materials</span>
-              <span className="text-slate-500 text-[10px]">Stock & deliveries</span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-              <span className="font-bold text-slate-800 block">Manpower</span>
-              <span className="text-slate-500 text-[10px]">Daily workforce counts</span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-              <span className="font-bold text-slate-800 block">Approvals</span>
-              <span className="text-slate-500 text-[10px]">Permits & NOC status</span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-              <span className="font-bold text-slate-800 block">Documents</span>
-              <span className="text-slate-500 text-[10px]">Drawings & BOQ files</span>
-            </div>
+            {isCoordinator && (
+              <button
+                type="button"
+                onClick={onOpenAppsScriptModal}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-semibold transition-all shrink-0"
+              >
+                <Code className="w-3.5 h-3.5" />
+                <span>Backend Schema</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Cache Management & Plug-and-Play */}
-        <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
           <div>
-            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-0.5">Plug & Play Database Cache</h4>
-            <p className="text-xs text-slate-500">Connecting to a brand-new database? Clear local cached records to immediately pull fresh schema tables.</p>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Database Name</span>
+            <span className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <span>{databaseMeta.name || 'Main Execution Database'}</span>
+            </span>
           </div>
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={handleResetToDefault}
-              disabled={isSyncing}
-              className="px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold transition-all border border-emerald-200 flex items-center gap-1.5"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset to Default Database</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleClearCacheAndResync}
-              className="px-3.5 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold transition-all border border-blue-200/60 flex items-center gap-1.5"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Clear Cache & Resync</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (confirm('Reset local cache to initial sample demo data? (Does not delete rows from connected cloud database).')) {
-                  api.resetToSeedData();
-                }
-              }}
-              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 text-xs font-semibold transition-all border border-slate-200"
-            >
-              Reset to Sample Data
-            </button>
+          <div>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Synchronization Mode</span>
+            <span className="font-semibold text-emerald-700 flex items-center gap-1.5">
+              <Check className="w-4 h-4 text-emerald-600" />
+              <span>Global Live Auto-Sync</span>
+            </span>
+          </div>
+          <div>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Last Live Sync</span>
+            <span className="font-mono text-slate-700 font-semibold">{lastSyncTime || 'Just now'}</span>
           </div>
         </div>
       </div>
 
-      {/* App Branding & Customization */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
-        <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-blue-600" />
-          <span>App Branding & Customization</span>
-        </h3>
-        <p className="text-xs text-slate-500">Customize the application display name shown across the top navigation, landing homepage, and browser tab.</p>
+      {/* Global "Switch Active Database" Card (Visible only when logged in as Project Coordinator) */}
+      {isCoordinator ? (
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+              <Database className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Switch Global Active Database</h3>
+              <p className="text-xs text-slate-500">
+                Point all connected campus dashboards and mobile devices to a new database without touching code or redeploying.
+              </p>
+            </div>
+          </div>
 
-        <form onSubmit={handleSaveAppName} className="space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Application Name</label>
+          <form onSubmit={handleSwitchSubmit} className="space-y-4 pt-2">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                New Database Link or Spreadsheet ID
+              </label>
               <input
                 type="text"
-                value={appNameInput}
-                onChange={(e) => setAppNameInput(e.target.value)}
-                placeholder="Uni Tracker"
+                placeholder="https://docs.google.com/spreadsheets/d/1V4KSeSh.../edit or spreadsheet ID"
+                value={sheetUrlInput}
+                onChange={(e) => setSheetUrlInput(e.target.value)}
                 required
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-semibold focus:outline-none focus:border-blue-500"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-800 focus:outline-none focus:border-blue-500 placeholder:text-slate-400"
+              />
+              <span className="text-[11px] text-slate-400 mt-1 block">
+                Ensure the target database has tabs: Projects, DayWiseReports, DayWisePhotos, ExecutionStages, Materials, Manpower, Approvals, Documents.
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1">
+                <Lock className="w-3.5 h-3.5 text-amber-600" />
+                <span>Coordinator Password (Security Verification)</span>
+              </label>
+              <input
+                type="password"
+                placeholder="Enter your coordinator password..."
+                value={switchPassword}
+                onChange={(e) => setSwitchPassword(e.target.value)}
+                required
+                className="w-full sm:w-80 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-blue-500 placeholder:text-slate-400"
               />
             </div>
-            <div className="self-end">
+
+            {switchFeedback && (
+              <div className={`p-3.5 rounded-xl text-xs flex items-center gap-2.5 border ${
+                switchFeedback.status === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-rose-50 text-rose-800 border-rose-200'
+              }`}>
+                {switchFeedback.status === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                )}
+                <span>{switchFeedback.message}</span>
+              </div>
+            )}
+
+            <div className="pt-2">
               <button
                 type="submit"
-                className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+                disabled={isSwitching}
+                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-400 text-white text-xs font-bold shadow-md shadow-blue-600/30 transition-all flex items-center gap-2"
               >
-                <Save className="w-3.5 h-3.5" />
-                <span>Save App Name</span>
+                <RefreshCw className={`w-4 h-4 ${isSwitching ? 'animate-spin' : ''}`} />
+                <span>{isSwitching ? 'Switching Database Globally...' : 'Switch Global Database'}</span>
               </button>
             </div>
+          </form>
+        </div>
+      ) : (
+        <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Lock className="w-5 h-5 text-amber-600 shrink-0" />
+            <div>
+              <h4 className="text-xs font-bold text-amber-950">Database Administration Locked</h4>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Log in as Project Coordinator to switch the active database, modify project records, or manage system parameters.
+              </p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={onOpenLogin}
+            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shadow-sm transition-all whitespace-nowrap shrink-0"
+          >
+            Coordinator Login
+          </button>
+        </div>
+      )}
 
-          {appNameFeedback && (
-            <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1.5 animate-in fade-in">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>{appNameFeedback}</span>
-            </p>
-          )}
-        </form>
-      </div>
+      {/* App Branding & Customization */}
+      {isCoordinator && (
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-blue-600" />
+            <span>App Branding & Customization</span>
+          </h3>
+          <p className="text-xs text-slate-500">Customize the application display name shown across the top navigation, landing homepage, and browser tab.</p>
+
+          <form onSubmit={handleSaveAppName} className="space-y-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Application Name</label>
+                <input
+                  type="text"
+                  value={appNameInput}
+                  onChange={(e) => setAppNameInput(e.target.value)}
+                  placeholder="Uni Tracker"
+                  required
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-semibold focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div className="self-end">
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Save App Name</span>
+                </button>
+              </div>
+            </div>
+
+            {appNameFeedback && (
+              <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1.5 animate-in fade-in">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{appNameFeedback}</span>
+              </p>
+            )}
+          </form>
+        </div>
+      )}
 
       {/* Role-Based Access Control & User Profile */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
@@ -435,71 +394,62 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Edit Profile Form */}
-        <form onSubmit={handleSaveProfile} className="pt-3 border-t border-slate-100 space-y-3">
-          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Edit Account Information</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Display Name</label>
-              <input
-                type="text"
-                value={profileName}
-                onChange={(e) => setProfileName(e.target.value)}
-                required
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
-              />
+        {isCoordinator && (
+          <form onSubmit={handleSaveProfile} className="pt-3 border-t border-slate-100 space-y-3">
+            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Edit Account Information</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Display Name</label>
+                <input
+                  type="text"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  required
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Username</label>
+                <input
+                  type="text"
+                  value={profileUsername}
+                  onChange={(e) => setProfileUsername(e.target.value)}
+                  required
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Active Role</label>
+                <select
+                  value={profileRole}
+                  onChange={(e) => setProfileRole(e.target.value as any)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="Project Coordinator">Project Coordinator (CRUD Enabled)</option>
+                  <option value="Viewer">Viewer Mode (Read-Only)</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Username</label>
-              <input
-                type="text"
-                value={profileUsername}
-                onChange={(e) => setProfileUsername(e.target.value)}
-                required
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-800 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Active Role</label>
-              <select
-                value={profileRole}
-                onChange={(e) => setProfileRole(e.target.value as any)}
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+
+            <div className="flex items-center justify-between pt-1">
+              {profileFeedback ? (
+                <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1.5 animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{profileFeedback}</span>
+                </span>
+              ) : <span />}
+
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
               >
-                <option value="Project Coordinator">Project Coordinator (CRUD Enabled)</option>
-                <option value="Viewer">Viewer Mode (Read-Only)</option>
-              </select>
+                <Save className="w-3.5 h-3.5" />
+                <span>Save Profile</span>
+              </button>
             </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-1">
-            {profileFeedback ? (
-              <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1.5 animate-in fade-in">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{profileFeedback}</span>
-              </span>
-            ) : <span />}
-
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>Save Profile</span>
-            </button>
-          </div>
-        </form>
+          </form>
+        )}
       </div>
-
-      {/* Password Prompt Modal for Protected Settings Changes */}
-      <PasswordPromptModal
-        isOpen={passwordModalOpen}
-        onClose={() => {
-          setPasswordModalOpen(false);
-          setPendingUrl(null);
-        }}
-        onVerified={handlePasswordVerified}
-        currentUser={currentUser}
-      />
     </div>
   );
 };
