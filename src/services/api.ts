@@ -7,6 +7,8 @@ import { INITIAL_USERS } from '../data/seedData';
 
 export const PERMANENT_DB_URL = "https://script.google.com/macros/s/AKfycbyZvYQnOg0eMvh8PUgCI2vCUL8kmfvb8rSlu0ASMtdwiDa7e5YNcFomf4vadDP8HNMfCg/exec";
 
+const SWR_CACHE_KEY = 'uni_tracker_live_cache';
+
 const STORAGE_KEYS = {
   PROJECTS: 'unitracker_projects',
   DAY_WISE_REPORTS: 'unitracker_day_wise_reports',
@@ -87,10 +89,37 @@ export const api = {
   },
 
   /**
+   * SWR (Stale-While-Revalidate) Cache Access
+   */
+  getLiveCache(): AllDataResponse | null {
+    try {
+      const raw = localStorage.getItem(SWR_CACHE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.Projects) && parsed.Projects.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse SWR cache:', e);
+    }
+    return null;
+  },
+
+  setLiveCache(data: AllDataResponse) {
+    try {
+      localStorage.setItem(SWR_CACHE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.warn('Failed to save SWR cache:', e);
+    }
+  },
+
+  /**
    * Clear all cached table data
    */
   clearCache() {
     const tableKeys = [
+      SWR_CACHE_KEY,
       STORAGE_KEYS.PROJECTS,
       STORAGE_KEYS.DAY_WISE_REPORTS,
       STORAGE_KEYS.DAY_WISE_PHOTOS,
@@ -157,12 +186,13 @@ export const api = {
   },
 
   /**
-   * 1. fetchAllData() (GET to permanent endpoint with cache buster):
-   * returns { status: "success", data: { Projects, DayWiseReports, DayWisePhotos, ExecutionStages, Materials, Manpower, Approvals, Documents, AppSettings, DatabaseMeta } }
+   * 1. fetchAllData() (GET to permanent endpoint):
+   * Pass ?fresh=1 only on manual sync or after mutations; otherwise fetch directly
+   * so backend cache responds in <1s.
    */
-  async fetchAllData(): Promise<AllDataResponse> {
-    // Always call unconditionally with cache buster
-    const response = await fetch(`${PERMANENT_DB_URL}?t=${Date.now()}`, { 
+  async fetchAllData(options?: { fresh?: boolean }): Promise<AllDataResponse> {
+    const fetchUrl = options?.fresh ? `${PERMANENT_DB_URL}?fresh=1` : PERMANENT_DB_URL;
+    const response = await fetch(fetchUrl, { 
       method: 'GET',
       redirect: 'follow'
     });
@@ -272,7 +302,8 @@ export const api = {
         this.setAppName(d.AppSettings.appName);
       }
 
-      // Cache locally
+      // Cache in SWR storage and local state
+      this.setLiveCache(normalizedData);
       this.cacheLocalData(normalizedData);
       this.setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 

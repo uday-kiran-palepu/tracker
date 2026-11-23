@@ -251,7 +251,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
               <div className="h-64 sm:h-80 relative">
-                <img src={heroImg} alt="" className="w-full h-full object-cover" />
+                <img src={heroImg} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4 text-white">
                   <p className="text-xs font-medium text-blue-300">NxtWave Campus Infrastructure</p>
@@ -988,6 +988,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                           alt={photo.caption || `Day ${activeDay} site photo`} 
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                           loading="lazy"
+                          decoding="async"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-90 group-hover:opacity-100 transition-opacity" />
 
@@ -1059,6 +1060,8 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
               src={lightboxPhoto.list[lightboxPhoto.index].imageUrl} 
               alt="" 
               className="max-h-[75vh] w-auto object-contain rounded-2xl shadow-2xl" 
+              loading="lazy"
+              decoding="async"
             />
             <div className="mt-4 text-center text-white">
               <h5 className="text-sm font-bold">{lightboxPhoto.list[lightboxPhoto.index].caption || `Day ${lightboxPhoto.list[lightboxPhoto.index].dayNumber} photo`}</h5>

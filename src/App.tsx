@@ -12,7 +12,7 @@ import { ApprovalsView } from './components/ApprovalsView';
 import { DocumentsView } from './components/DocumentsView';
 import { SettingsView } from './components/SettingsView';
 import { ToastContainer, ToastMessage } from './components/Toast';
-import { 
+import {
   CoordinatorLoginModal, AppsScriptModal, AddProjectModal, EditProjectModal,
   AddApprovalModal, AddMaterialModal, AddDocumentModal, AddDayWiseReportAndPhotosModal,
   EditDayWiseReportModal, AddExecutionStageModal, EditExecutionStageModal,
@@ -20,9 +20,9 @@ import {
 } from './components/Modals';
 import { Building2, RefreshCw } from 'lucide-react';
 
-import { 
-  Project, ExecutionStageItem, MaterialItem, ManpowerItem, ApprovalItem, 
-  DocumentItem, PhotoItem, SiteUpdateItem, User, DayWiseReport, DayWisePhoto, DatabaseMeta 
+import {
+  Project, ExecutionStageItem, MaterialItem, ManpowerItem, ApprovalItem,
+  DocumentItem, PhotoItem, SiteUpdateItem, User, DayWiseReport, DayWisePhoto, DatabaseMeta
 } from './types';
 import { api } from './services/api';
 
@@ -35,12 +35,16 @@ export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [orgName, setOrgName] = useState('NxtWave (Flagship)');
 
+  // Instant Startup via SWR Cache
+  const initialCache = api.getLiveCache();
+
   // Live Backend & Loading State
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isConnected, setIsConnected] = useState<boolean>(false);
+  // Only show full-screen spinner if initialCache is completely empty
+  const [isLoading, setIsLoading] = useState<boolean>(() => !initialCache || !initialCache.Projects || initialCache.Projects.length === 0);
+  const [isConnected, setIsConnected] = useState<boolean>(() => Boolean(initialCache && initialCache.Projects && initialCache.Projects.length > 0));
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>(api.getLastSyncTime());
-  const [databaseMeta, setDatabaseMeta] = useState<DatabaseMeta>({ name: 'Main Execution Database' });
+  const [databaseMeta, setDatabaseMeta] = useState<DatabaseMeta>(() => initialCache?.DatabaseMeta || { name: 'Main Execution Database' });
 
   // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -62,15 +66,15 @@ export default function App() {
     document.title = `${appName} - Real-Time Campus Execution Tracker`;
   }, [appName]);
 
-  // Main 8 Database Tables State - strictly initialized as empty arrays
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [dayWiseReports, setDayWiseReports] = useState<DayWiseReport[]>([]);
-  const [dayWisePhotos, setDayWisePhotos] = useState<DayWisePhoto[]>([]);
-  const [executionStages, setExecutionStages] = useState<ExecutionStageItem[]>([]);
-  const [materials, setMaterials] = useState<MaterialItem[]>([]);
-  const [manpower, setManpower] = useState<ManpowerItem[]>([]);
-  const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
-  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  // Main 8 Database Tables State - hydrated immediately from SWR cache (0ms instant startup)
+  const [projects, setProjects] = useState<Project[]>(() => initialCache?.Projects || []);
+  const [dayWiseReports, setDayWiseReports] = useState<DayWiseReport[]>(() => initialCache?.DayWiseReports || []);
+  const [dayWisePhotos, setDayWisePhotos] = useState<DayWisePhoto[]>(() => initialCache?.DayWisePhotos || []);
+  const [executionStages, setExecutionStages] = useState<ExecutionStageItem[]>(() => initialCache?.ExecutionStages || []);
+  const [materials, setMaterials] = useState<MaterialItem[]>(() => initialCache?.Materials || []);
+  const [manpower, setManpower] = useState<ManpowerItem[]>(() => initialCache?.Manpower || []);
+  const [approvals, setApprovals] = useState<ApprovalItem[]>(() => initialCache?.Approvals || []);
+  const [documents, setDocuments] = useState<DocumentItem[]>(() => initialCache?.Documents || []);
   const [siteUpdates, setSiteUpdates] = useState<SiteUpdateItem[]>([]);
 
   // Selected project for detail view
@@ -106,62 +110,73 @@ export default function App() {
   const [manpowerToEdit, setManpowerToEdit] = useState<ManpowerItem | null>(null);
 
   // Core data sync function with silent background mode support
-  const syncData = useCallback(async (isSilent = false) => {
-    if (!isSilent) setIsSyncing(true);
+  const syncData = useCallback(async (options?: boolean | { isSilent?: boolean; fresh?: boolean }) => {
+    const isSilent = typeof options === 'boolean' ? options : (options?.isSilent ?? false);
+    const isFresh = typeof options === 'boolean' ? false : (options?.fresh ?? false);
+
+    // Subtle non-blocking syncing indicator in header (never block screen with full-screen spinner)
+    setIsSyncing(true);
+
     try {
-      const result = await api.fetchAllData();
-      setProjects(result.Projects || []);
-      setDayWiseReports(result.DayWiseReports || []);
-      setDayWisePhotos(result.DayWisePhotos || []);
-      setExecutionStages(result.ExecutionStages || []);
-      setMaterials(result.Materials || []);
-      setManpower(result.Manpower || []);
-      setApprovals(result.Approvals || []);
-      setDocuments(result.Documents || []);
+      const result = await api.fetchAllData({ fresh: isFresh });
+      if (result) {
+        setProjects(result.Projects || []);
+        setDayWiseReports(result.DayWiseReports || []);
+        setDayWisePhotos(result.DayWisePhotos || []);
+        setExecutionStages(result.ExecutionStages || []);
+        setMaterials(result.Materials || []);
+        setManpower(result.Manpower || []);
+        setApprovals(result.Approvals || []);
+        setDocuments(result.Documents || []);
 
-      if (result.DatabaseMeta) {
-        setDatabaseMeta(result.DatabaseMeta);
-      }
+        if (result.DatabaseMeta) {
+          setDatabaseMeta(result.DatabaseMeta);
+        }
 
-      setIsConnected(true);
-      setLastSyncTime(api.getLastSyncTime());
+        setIsConnected(true);
+        setLastSyncTime(api.getLastSyncTime());
 
-      if (result.AppSettings?.appName) {
-        setAppName(result.AppSettings.appName);
+        if (result.AppSettings?.appName) {
+          setAppName(result.AppSettings.appName);
+        }
       }
     } catch (err: any) {
       console.warn('Live database sync error:', err);
-      setIsConnected(false);
+      if (!api.getLiveCache() && projects.length === 0) {
+        setIsConnected(false);
+      }
       if (!isSilent) {
-        showToast('error', 'Could not connect to live database. Network offline.', 'Connection Error');
+        showToast('error', 'Could not sync with live database. Network offline.', 'Connection Error');
       }
     } finally {
       setIsLoading(false);
-      if (!isSilent) setIsSyncing(false);
+      setIsSyncing(false);
     }
-  }, [showToast]);
+  }, [showToast, projects.length]);
 
   // App Startup & Silent Background Auto-Sync
   useEffect(() => {
-    // 1. Immediately fetch live data on app startup
-    syncData(false);
+    // 1. If SWR cache exists, UI renders in 0ms and we silently revalidate in the background.
+    // If first visit (no cache), show full-screen spinner while fetching.
+    const hasLiveCache = Boolean(initialCache && initialCache.Projects && initialCache.Projects.length > 0);
+    syncData({ isSilent: hasLiveCache, fresh: false });
 
     // 2. Re-sync automatically when browser tab regains focus
     const handleFocus = () => {
-      syncData(true);
+      syncData({ isSilent: true, fresh: false });
     };
     window.addEventListener('focus', handleFocus);
 
     // 3. Silent background auto-sync every 60 seconds
     const intervalId = setInterval(() => {
-      syncData(true);
+      syncData({ isSilent: true, fresh: false });
     }, 60000);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
       clearInterval(intervalId);
     };
-  }, [syncData]);
+  }, [syncData, initialCache]);
 
   // Auth Handlers
   const handleLogin = (user: User) => {
@@ -194,7 +209,7 @@ export default function App() {
         api.clearCache();
 
         // Fetch fresh data from newly switched database
-        await syncData(false);
+        await syncData({ isSilent: false, fresh: true });
 
         showToast(
           'success',
@@ -223,6 +238,7 @@ export default function App() {
     try {
       await api.createRecord('Projects', newProj);
       showToast('success', `Campus "${newProj.name}" created and synced to Database!`, 'Saved to Database');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to sync project to Database: ${e.message}`);
     }
@@ -239,6 +255,7 @@ export default function App() {
     try {
       await api.updateRecord('Projects', updatedProj.id, updatedProj);
       showToast('success', `Campus "${updatedProj.name}" updated successfully!`, 'Saved to Database');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to update project: ${e.message}`);
     }
@@ -254,6 +271,7 @@ export default function App() {
       try {
         await api.deleteRecord('Projects', id);
         showToast('success', 'Project removed from Database.', 'Deleted');
+        syncData({ isSilent: true, fresh: true });
       } catch (e: any) {
         showToast('error', `Failed to delete project: ${e.message}`);
       }
@@ -293,6 +311,7 @@ export default function App() {
       try {
         await api.updateRecord('ExecutionStages', stageId, targetStage);
         showToast('success', `Stage status updated to "${status}"`, 'Saved to Database');
+        syncData({ isSilent: true, fresh: true });
       } catch (e: any) {
         showToast('error', `Failed to update stage in Database: ${e.message}`);
       }
@@ -325,6 +344,7 @@ export default function App() {
       try {
         await api.updateRecord('ExecutionStages', stageId, targetStage);
         showToast('success', 'Subtask updated in Database', 'Checklist Synced');
+        syncData({ isSilent: true, fresh: true });
       } catch (e: any) {
         showToast('error', `Failed to sync subtask: ${e.message}`);
       }
@@ -337,6 +357,7 @@ export default function App() {
     try {
       await api.createRecord('ExecutionStages', newStage);
       showToast('success', `Stage "${newStage.stageName}" saved to Database!`, 'Stage Added');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to save stage: ${e.message}`);
     }
@@ -348,6 +369,7 @@ export default function App() {
     try {
       await api.updateRecord('ExecutionStages', updatedStage.id, updatedStage);
       showToast('success', `Stage "${updatedStage.stageName}" updated!`, 'Stage Updated');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to update stage: ${e.message}`);
     }
@@ -359,6 +381,7 @@ export default function App() {
       try {
         await api.deleteRecord('ExecutionStages', id);
         showToast('success', 'Execution stage removed from Database.', 'Deleted');
+        syncData({ isSilent: true, fresh: true });
       } catch (e: any) {
         showToast('error', `Failed to delete stage: ${e.message}`);
       }
@@ -372,6 +395,7 @@ export default function App() {
     try {
       await api.createRecord('Manpower', newMp);
       showToast('success', `${newMp.workerCount} workers logged for ${newMp.trade}`, 'Manpower Synced');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to log manpower: ${e.message}`);
     }
@@ -383,6 +407,7 @@ export default function App() {
     try {
       await api.updateRecord('Manpower', updatedMp.id, updatedMp);
       showToast('success', 'Manpower record updated in Database.', 'Updated');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to update manpower: ${e.message}`);
     }
@@ -394,6 +419,7 @@ export default function App() {
       try {
         await api.deleteRecord('Manpower', id);
         showToast('success', 'Manpower entry removed from Database.', 'Deleted');
+        syncData({ isSilent: true, fresh: true });
       } catch (e: any) {
         showToast('error', `Failed to delete manpower: ${e.message}`);
       }
@@ -406,6 +432,7 @@ export default function App() {
     try {
       await api.createRecord('Materials', newMat);
       showToast('success', `Material "${newMat.itemName}" saved to Database.`, 'Saved to Database');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to add material: ${e.message}`);
     }
@@ -416,6 +443,7 @@ export default function App() {
     try {
       await api.deleteRecord('Materials', id);
       showToast('success', 'Material removed from Database.', 'Deleted');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to delete material: ${e.message}`);
     }
@@ -427,6 +455,7 @@ export default function App() {
     try {
       await api.createRecord('Approvals', newApp);
       showToast('success', `Approval "${newApp.approvalName}" logged in Database.`, 'Saved to Database');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to add approval: ${e.message}`);
     }
@@ -447,6 +476,7 @@ export default function App() {
       try {
         await api.updateRecord('Approvals', id, targetApp);
         showToast('success', `Approval status changed to ${status}.`, 'Saved to Database');
+        syncData({ isSilent: true, fresh: true });
       } catch (e: any) {
         showToast('error', `Failed to update approval: ${e.message}`);
       }
@@ -458,6 +488,7 @@ export default function App() {
     try {
       await api.deleteRecord('Approvals', id);
       showToast('success', 'Approval removed from Database.', 'Deleted');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to delete approval: ${e.message}`);
     }
@@ -469,6 +500,7 @@ export default function App() {
     try {
       await api.createRecord('Documents', newDoc);
       showToast('success', `Document "${newDoc.title}" synced to Database.`, 'Saved to Database');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to add document: ${e.message}`);
     }
@@ -479,6 +511,7 @@ export default function App() {
     try {
       await api.deleteRecord('Documents', id);
       showToast('success', 'Document removed from Database.', 'Deleted');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to delete document: ${e.message}`);
     }
@@ -491,6 +524,7 @@ export default function App() {
       setDayWisePhotos([...newPhotos, ...dayWisePhotos]);
     }
     showToast('success', `Day ${newReport.dayNumber} report and ${newPhotos.length} photos uploaded to Cloud Storage & Database!`, 'Upload Complete');
+    syncData({ isSilent: true, fresh: true });
   };
 
   const handleUpdateDayWiseReport = async (updatedReport: DayWiseReport) => {
@@ -499,6 +533,7 @@ export default function App() {
     try {
       await api.updateRecord('DayWiseReports', updatedReport.id, updatedReport);
       showToast('success', `Day ${updatedReport.dayNumber} report updated!`, 'Saved to Database');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to update report: ${e.message}`);
     }
@@ -509,6 +544,7 @@ export default function App() {
     try {
       await api.deleteRecord('DayWiseReports', id);
       showToast('success', 'Daily Report removed from Database.', 'Deleted');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to delete report: ${e.message}`);
     }
@@ -519,6 +555,7 @@ export default function App() {
     try {
       await api.deleteRecord('DayWisePhotos', id);
       showToast('success', 'Photo removed from Cloud Storage & Database.', 'Deleted');
+      syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to delete photo: ${e.message}`);
     }
@@ -623,7 +660,7 @@ export default function App() {
               onOpenAddMaterial={() => setAddMaterialModalOpen(true)}
               onOpenAddDoc={() => setAddDocumentModalOpen(true)}
               onOpenAddDayWise={() => setAddDayWiseModalOpen(true)}
-              onOpenAddUpdate={() => {}}
+              onOpenAddUpdate={() => { }}
               onUpdateStageStatus={handleUpdateStageStatus}
               onToggleSubTask={handleToggleSubTask}
               onOpenEditProject={handleOpenEditProject}
@@ -741,7 +778,7 @@ export default function App() {
                   onUpdateCurrentUser={(u) => setCurrentUser(u)}
                   databaseMeta={databaseMeta}
                   onSwitchDatabase={handleSwitchDatabase}
-                  onRefreshData={() => syncData(false)}
+                  onRefreshData={() => syncData({ isSilent: false, fresh: true })}
                 />
               )}
             </>

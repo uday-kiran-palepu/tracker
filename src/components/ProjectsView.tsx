@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   FolderKanban, Plus, Search, Filter, MapPin, Building, 
   Calendar, ArrowRight, Trash2, Edit3, ShieldAlert, CheckCircle2 
@@ -36,15 +36,17 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
   const isCoordinator = currentUser.role === 'Project Coordinator';
 
-  const filteredProjects = projects.filter(proj => {
-    const codeStr = proj.labCode || proj.code || proj.id || '';
-    const matchesSearch = proj.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          proj.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          codeStr.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = selectedStatusFilter === 'All' || proj.status === selectedStatusFilter;
-    const matchesHealth = selectedHealthFilter === 'All' || proj.health === selectedHealthFilter;
-    return matchesSearch && matchesStatus && matchesHealth;
-  });
+  const filteredProjects = useMemo(() => {
+    return projects.filter(proj => {
+      const codeStr = proj.labCode || proj.code || proj.id || '';
+      const matchesSearch = proj.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            proj.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            codeStr.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = selectedStatusFilter === 'All' || proj.status === selectedStatusFilter;
+      const matchesHealth = selectedHealthFilter === 'All' || proj.health === selectedHealthFilter;
+      return matchesSearch && matchesStatus && matchesHealth;
+    });
+  }, [projects, searchQuery, selectedStatusFilter, selectedHealthFilter]);
 
   return (
     <div className="space-y-6">
@@ -143,6 +145,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     src={proj.heroImageUrl || proj.heroImage}
                     alt={proj.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                    decoding="async"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-transparent to-transparent" />
                   
@@ -272,7 +276,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 {filteredProjects.map((proj) => (
                   <tr key={proj.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-4 flex items-center gap-3">
-                      <img src={proj.heroImageUrl || proj.heroImage} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                      <img src={proj.heroImageUrl || proj.heroImage} alt="" className="w-10 h-10 rounded-lg object-cover" loading="lazy" decoding="async" />
                       <div>
                         <p 
                           onClick={() => onSelectProject(proj)}

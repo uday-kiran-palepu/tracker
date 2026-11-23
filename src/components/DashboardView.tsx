@@ -1,7 +1,7 @@
-import React from 'react';
-import { 
-  FolderKanban, Clock, Activity, CheckCircle2, AlertTriangle, 
-  ArrowUpRight, ShieldAlert, Sparkles, Building2, MapPin 
+import React, { useMemo } from 'react';
+import {
+  FolderKanban, Clock, Activity, CheckCircle2, AlertTriangle,
+  ArrowUpRight, ShieldAlert, Sparkles, Building2, MapPin
 } from 'lucide-react';
 import { Project, SiteUpdateItem } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -23,23 +23,54 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   setSelectedHealthFilter,
   onSelectProject
 }) => {
-  // KPI Calculations
-  const activeCount = projects.filter(p => p.status === 'Active').length;
-  const designCount = projects.filter(p => p.status === 'In Design').length;
-  const executionCount = projects.filter(p => p.status === 'In Execution').length;
-  const handoverCount = projects.filter(p => p.status === 'Handover' || p.status === 'Completed').length;
+  // Memoized KPI Calculations
+  const {
+    activeCount,
+    designCount,
+    executionCount,
+    handoverCount,
+    onTrackCount,
+    atRiskCount,
+    delayedCount,
+    avgProgress,
+    totalArea,
+    totalBudgetAllocated,
+    totalBudgetSpent,
+    uniqueCitiesCount
+  } = useMemo(() => {
+    const active = projects.filter(p => p.status === 'Active').length;
+    const design = projects.filter(p => p.status === 'In Design').length;
+    const execution = projects.filter(p => p.status === 'In Execution').length;
+    const handover = projects.filter(p => p.status === 'Handover' || p.status === 'Completed').length;
 
-  const onTrackCount = projects.filter(p => p.health === 'On Track').length;
-  const atRiskCount = projects.filter(p => p.health === 'At Risk').length;
-  const delayedCount = projects.filter(p => p.health === 'Delayed').length;
+    const onTrack = projects.filter(p => p.health === 'On Track').length;
+    const atRisk = projects.filter(p => p.health === 'At Risk').length;
+    const delayed = projects.filter(p => p.health === 'Delayed').length;
 
-  const avgProgress = Math.round(
-    projects.reduce((acc, curr) => acc + curr.progress, 0) / (projects.length || 1)
-  );
+    const avgProg = Math.round(
+      projects.reduce((acc, curr) => acc + curr.progress, 0) / (projects.length || 1)
+    );
 
-  const totalArea = projects.reduce((acc, curr) => acc + (Number(curr.areaSft) || 0), 0);
-  const totalBudgetAllocated = projects.reduce((acc, curr) => acc + (Number(curr.budgetAllocated) || 0), 0);
-  const totalBudgetSpent = projects.reduce((acc, curr) => acc + (Number(curr.budgetSpent) || 0), 0);
+    const area = projects.reduce((acc, curr) => acc + (Number(curr.areaSft) || 0), 0);
+    const allocated = projects.reduce((acc, curr) => acc + (Number(curr.budgetAllocated) || 0), 0);
+    const spent = projects.reduce((acc, curr) => acc + (Number(curr.budgetSpent) || 0), 0);
+    const citiesCount = new Set(projects.map(p => p.city)).size;
+
+    return {
+      activeCount: active,
+      designCount: design,
+      executionCount: execution,
+      handoverCount: handover,
+      onTrackCount: onTrack,
+      atRiskCount: atRisk,
+      delayedCount: delayed,
+      avgProgress: avgProg,
+      totalArea: area,
+      totalBudgetAllocated: allocated,
+      totalBudgetSpent: spent,
+      uniqueCitiesCount: citiesCount
+    };
+  }, [projects]);
 
   // Donut chart data for progress breakdown
   const progressData = [
@@ -70,7 +101,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </span>
           <h2 className="text-3xl font-extrabold tracking-tight">India Campus Expansion Tracker</h2>
           <p className="text-slate-300 text-sm mt-2 leading-relaxed">
-            Monitoring {projects.length} campuses across {new Set(projects.map(p => p.city)).size} cities totaling {totalArea.toLocaleString()} sft of state-of-the-art learning hubs.
+            Monitoring {projects.length} campuses across {uniqueCitiesCount} cities totaling {totalArea.toLocaleString()} sft of state-of-the-art learning hubs.
           </p>
           <div className="flex flex-wrap items-center gap-4 mt-6">
             <button
@@ -94,7 +125,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* 4 Interactive KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Active */}
-        <div 
+        <div
           onClick={() => handleKpiClick('Active')}
           className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer group"
         >
@@ -111,7 +142,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* In Design */}
-        <div 
+        <div
           onClick={() => handleKpiClick('In Design')}
           className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer group"
         >
@@ -128,7 +159,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* In Execution */}
-        <div 
+        <div
           onClick={() => handleKpiClick('In Execution')}
           className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer group"
         >
@@ -145,7 +176,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Handover */}
-        <div 
+        <div
           onClick={() => handleKpiClick('Handover')}
           className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer group"
         >
@@ -217,7 +248,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div className="space-y-3 my-4">
-            <div 
+            <div
               onClick={() => handleHealthClick('On Track')}
               className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-100 hover:bg-emerald-100/60 transition-all cursor-pointer"
             >
@@ -233,7 +264,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span className="text-lg font-black text-emerald-800">{onTrackCount}</span>
             </div>
 
-            <div 
+            <div
               onClick={() => handleHealthClick('At Risk')}
               className="flex items-center justify-between p-3.5 rounded-xl bg-amber-50/60 border border-amber-100 hover:bg-amber-100/60 transition-all cursor-pointer"
             >
@@ -249,7 +280,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span className="text-lg font-black text-amber-800">{atRiskCount}</span>
             </div>
 
-            <div 
+            <div
               onClick={() => handleHealthClick('Delayed')}
               className="flex items-center justify-between p-3.5 rounded-xl bg-rose-50/60 border border-rose-100 hover:bg-rose-100/60 transition-all cursor-pointer"
             >
@@ -326,23 +357,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {siteUpdates.slice(0, 4).map((update) => {
             const project = projects.find(p => p.id === update.projectId) || projects[0];
             return (
-              <div 
+              <div
                 key={update.id}
                 onClick={() => project && onSelectProject(project)}
                 className="rounded-xl border border-slate-200 overflow-hidden hover:shadow-md transition-all cursor-pointer bg-slate-50/50 flex flex-col justify-between group"
               >
                 <div>
                   <div className="h-36 overflow-hidden relative">
-                    <img 
-                      src={update.imageUrl} 
-                      alt={update.projectName} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                    <img
+                      src={update.imageUrl}
+                      alt={update.projectName}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                      decoding="async"
                     />
                     <div className="absolute top-2 right-2">
-                      <span className={`whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-bold px-2.5 py-1 rounded-full text-white ${
-                        update.healthBadge === 'On Track' ? 'bg-emerald-600' :
-                        update.healthBadge === 'At Risk' ? 'bg-amber-600' : 'bg-rose-600'
-                      }`}>
+                      <span className={`whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-bold px-2.5 py-1 rounded-full text-white ${update.healthBadge === 'On Track' ? 'bg-emerald-600' :
+                          update.healthBadge === 'At Risk' ? 'bg-amber-600' : 'bg-rose-600'
+                        }`}>
                         {update.healthBadge}
                       </span>
                     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import { 
   Search, ArrowRight, Layers, MapPin, Building2, CheckCircle2, 
@@ -25,18 +25,25 @@ export const MapView: React.FC<MapViewProps> = ({ projects, onSelectProject }) =
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
 
-  const filteredProjects = projects.filter(p => {
-    const codeStr = p.labCode || p.code || p.id || '';
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          p.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          codeStr.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
-    const matchesCity = !selectedCity || p.city === selectedCity;
-    return matchesSearch && matchesStatus && matchesCity;
-  });
+  const filteredProjects = useMemo(() => {
+    return projects.filter(p => {
+      const codeStr = p.labCode || p.code || p.id || '';
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            p.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            codeStr.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
+      const matchesCity = !selectedCity || p.city === selectedCity;
+      return matchesSearch && matchesStatus && matchesCity;
+    });
+  }, [projects, searchQuery, statusFilter, selectedCity]);
 
-  const cities = Array.from(new Set(projects.map(p => p.city).filter(Boolean)));
-  const totalArea = projects.reduce((acc, curr) => acc + (Number(curr.areaSft) || 0), 0);
+  const cities = useMemo(() => {
+    return Array.from(new Set(projects.map(p => p.city).filter(Boolean)));
+  }, [projects]);
+
+  const totalArea = useMemo(() => {
+    return projects.reduce((acc, curr) => acc + (Number(curr.areaSft) || 0), 0);
+  }, [projects]);
 
   /**
    * Status Colors per specification:
@@ -60,7 +67,9 @@ export const MapView: React.FC<MapViewProps> = ({ projects, onSelectProject }) =
     }
   };
 
-  const selectedProj = projects.find(p => p.id === activeMarkerId);
+  const selectedProj = useMemo(() => {
+    return projects.find(p => p.id === activeMarkerId);
+  }, [projects, activeMarkerId]);
 
   // Initialize Leaflet Map
   useEffect(() => {

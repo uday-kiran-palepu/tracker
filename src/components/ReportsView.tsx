@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   BarChart3, Download, Printer, Users, Package, FileCheck2, TrendingUp, Building2 
 } from 'lucide-react';
@@ -20,18 +20,27 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 }) => {
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
 
-  const filteredProjects = selectedProjectId === 'all' 
-    ? projects 
-    : projects.filter(p => p.id === selectedProjectId);
+  const filteredProjects = useMemo(() => {
+    return selectedProjectId === 'all' 
+      ? projects 
+      : projects.filter(p => p.id === selectedProjectId);
+  }, [projects, selectedProjectId]);
 
-  const totalWorkers = manpower.reduce((acc, curr) => acc + (curr.workerCount ?? curr.count ?? 0), 0);
-  const totalArea = filteredProjects.reduce((acc, curr) => acc + curr.areaSft, 0);
+  const totalWorkers = useMemo(() => {
+    return manpower.reduce((acc, curr) => acc + (curr.workerCount ?? curr.count ?? 0), 0);
+  }, [manpower]);
 
-  const chartData = projects.map(p => ({
-    name: p.code || p.id,
-    progress: p.progress,
-    area: p.areaSft / 1000
-  }));
+  const totalArea = useMemo(() => {
+    return filteredProjects.reduce((acc, curr) => acc + curr.areaSft, 0);
+  }, [filteredProjects]);
+
+  const chartData = useMemo(() => {
+    return projects.map(p => ({
+      name: p.code || p.id,
+      progress: p.progress,
+      area: p.areaSft / 1000
+    }));
+  }, [projects]);
 
   const handleExportCSV = () => {
     const headers = ['Project Name', 'Code', 'City', 'Area (sft)', 'Status', 'Health', 'Progress (%)'];
