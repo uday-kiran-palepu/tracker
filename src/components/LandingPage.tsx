@@ -46,7 +46,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         />
 
         {/* 80% transparency overlay (20% dark tint) so headline, app name, and CTA are clearly readable over video */}
-        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+        <div className="absolute inset-0 bg-black/40 pointer-events-none" />
       </div>
 
       {/* Top Navbar */}
@@ -126,7 +126,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <span>Explore India Campus Map</span>
           </button>
 
-          {/* WhatsApp Direct Team Action */}
+          {/* WhatsApp Direct Team Action
           {cleanWhatsApp && (
             <a
               href={`https://wa.me/${cleanWhatsApp}`}
@@ -137,7 +137,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <MessageCircle className="w-4 h-4" />
               <span>WhatsApp Team</span>
             </a>
-          )}
+          )} */}
         </div>
       </main>
 
