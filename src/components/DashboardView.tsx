@@ -424,7 +424,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     />
                     <div className="absolute top-2 right-2">
                       <span className={`whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-bold px-2.5 py-1 rounded-full text-white ${update.healthBadge === 'On Track' ? 'bg-emerald-600' :
-                          update.healthBadge === 'At Risk' ? 'bg-amber-600' : 'bg-rose-600'
+                        update.healthBadge === 'At Risk' ? 'bg-amber-600' : 'bg-rose-600'
                         }`}>
                         {update.healthBadge}
                       </span>

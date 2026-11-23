@@ -41,6 +41,7 @@ export interface UploadPhotoPayload {
 export interface UploadStagePhotoPayload {
   projectId: string;
   stageType: StageType;
+  stageCategory?: string;
   caption?: string;
   date?: string;
   fileName: string;
@@ -355,15 +356,40 @@ export const api = {
         StagePhotos: (() => {
           const rawList = (d.StagePhotos || d.stagePhotos || []);
           const list = (Array.isArray(rawList) && rawList.length > 0) ? rawList : this.getLocalStagePhotos();
-          return list.map((sp: any) => ({
-            ...sp,
-            projectId: String(sp.projectId || '').trim(),
-            stageType: sp.stageType || sp.stageCategory || 'Current Stage',
-            caption: sp.caption || '',
-            date: formatDate(sp.date, 'input') || sp.date,
-            driveFileId: sp.driveFileId || '',
-            imageUrl: sp.imageUrl || ''
-          }));
+          return list.map((sp: any) => {
+            const rawCat = String(sp.stageCategory ?? sp.stageType ?? '').trim();
+            const catLower = rawCat.toLowerCase();
+            let resolvedStage: StageType | '' = '';
+
+            if (catLower === 'initial stage' || catLower === 'initial') {
+              resolvedStage = 'Initial Stage';
+            } else if (catLower === 'final stage' || catLower === 'final') {
+              resolvedStage = 'Final Stage';
+            } else if (catLower === 'current stage' || catLower === 'current') {
+              resolvedStage = 'Current Stage';
+            } else if (!rawCat && sp.caption) {
+              const capLower = String(sp.caption).toLowerCase();
+              if (capLower.includes('initial')) resolvedStage = 'Initial Stage';
+              else if (capLower.includes('final')) resolvedStage = 'Final Stage';
+              else if (capLower.includes('current')) resolvedStage = 'Current Stage';
+            }
+
+            if (!resolvedStage && rawCat) {
+              resolvedStage = rawCat as StageType;
+            }
+
+            return {
+              ...sp,
+              id: String(sp.id || ''),
+              projectId: String(sp.projectId || '').trim(),
+              stageType: (resolvedStage || 'Current Stage') as StageType,
+              stageCategory: String(sp.stageCategory || resolvedStage || ''),
+              caption: sp.caption || '',
+              date: formatDate(sp.date, 'input') || sp.date,
+              driveFileId: sp.driveFileId || '',
+              imageUrl: sp.imageUrl || ''
+            };
+          });
         })(),
         DatabaseMeta: d.DatabaseMeta || {
           name: d.DatabaseMeta?.name || 'Main Execution Database',
@@ -434,11 +460,15 @@ export const api = {
    * { action: "delete", sheetName, id }
    */
   async deleteRecord(sheetName: string, id: string): Promise<{ status: string; message?: string }> {
-    return this.postToScript<{ status: string; message?: string }>({
+    const res = await this.postToScript<{ status: string; message?: string }>({
       action: 'delete',
       sheetName,
       id
     });
+    if (res.status !== 'success') {
+      throw new Error(res.message || `Failed to delete record from ${sheetName}`);
+    }
+    return res;
   },
 
   /**
@@ -571,27 +601,51 @@ export const api = {
    * 6. uploadDayWisePhoto(payload) (POST):
    */
   async uploadDayWisePhoto(payload: UploadPhotoPayload): Promise<{ status: string; data?: DayWisePhoto; message?: string }> {
+    const formattedDate = formatDate(payload.date, 'input') || payload.date;
     const res = await this.postToScript<{ status: string; data?: any; message?: string }>({
       action: 'uploadPhoto',
-      ...payload
+      ...payload,
+      date: formattedDate
     });
 
     if (res.status === 'success' && res.data) {
+      const realData = res.data;
+      const photoRecord: DayWisePhoto = {
+        id: String(realData.id || ''),
+        projectId: String(realData.projectId || payload.projectId),
+        dayNumber: Number(realData.dayNumber ?? payload.dayNumber) || 1,
+        date: formatDate(realData.date || formattedDate, 'input') || formattedDate,
+        caption: realData.caption || payload.caption || '',
+        driveFileId: realData.driveFileId || '',
+        imageUrl: realData.imageUrl || ''
+      };
+
+      const cache = this.getLiveCache();
+      if (cache) {
+        cache.DayWisePhotos = [photoRecord, ...(cache.DayWisePhotos || []).filter(p => p.id !== photoRecord.id)];
+        this.setLiveCache(cache);
+      }
+
       return {
         status: 'success',
-        data: {
-          id: res.data.id || `photo-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-          projectId: payload.projectId,
-          dayNumber: payload.dayNumber,
-          date: formatDate(payload.date, 'input') || payload.date,
-          caption: payload.caption || '',
-          driveFileId: res.data.driveFileId || '',
-          imageUrl: res.data.imageUrl || ''
-        }
+        data: photoRecord
       };
     } else {
       throw new Error(res.message || 'Upload failed on Database Apps Script');
     }
+  },
+
+  async deleteDayWisePhoto(id: string): Promise<{ status: string; message?: string }> {
+    const res = await this.deleteRecord('DayWisePhotos', id);
+    if (res.status !== 'success') {
+      throw new Error(res.message || 'Failed to delete photo from Database');
+    }
+    const cache = this.getLiveCache();
+    if (cache && cache.DayWisePhotos) {
+      cache.DayWisePhotos = cache.DayWisePhotos.filter(p => p.id !== id);
+      this.setLiveCache(cache);
+    }
+    return res;
   },
 
   /**
@@ -643,37 +697,32 @@ export const api = {
   },
 
   async uploadStagePhoto(payload: UploadStagePhotoPayload): Promise<{ status: string; data?: StagePhoto; message?: string }> {
-    // 1. Upload photo to Google Drive
+    const formattedDate = formatDate(payload.date, 'input') || formatDate(new Date(), 'input');
+    const stageCat = (payload.stageCategory || payload.stageType) as StageType;
+
     const uploadRes = await this.postToScript<{ status: string; data?: any; message?: string }>({
-      action: 'uploadPhoto',
-      ...payload
+      action: 'uploadStagePhoto',
+      ...payload,
+      stageCategory: stageCat,
+      stageType: stageCat,
+      date: formattedDate
     });
 
     if (uploadRes.status === 'success' && uploadRes.data) {
-      const photoId = uploadRes.data.id || `stagephoto-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-      const driveFileId = uploadRes.data.driveFileId || '';
-      const imageUrl = uploadRes.data.imageUrl || '';
-      const formattedDate = formatDate(payload.date, 'input') || formatDate(new Date(), 'input');
-
+      const realData = uploadRes.data;
       const photoRecord: StagePhoto = {
-        id: photoId,
-        projectId: payload.projectId,
-        stageType: payload.stageType,
-        caption: payload.caption || '',
-        date: formattedDate,
-        driveFileId,
-        imageUrl,
-        createdAt: new Date().toISOString()
+        id: String(realData.id || ''),
+        projectId: String(realData.projectId || payload.projectId),
+        stageType: (realData.stageType || realData.stageCategory || stageCat) as StageType,
+        stageCategory: String(realData.stageCategory || realData.stageType || stageCat),
+        caption: realData.caption || payload.caption || '',
+        date: formatDate(realData.date || formattedDate, 'input') || formattedDate,
+        driveFileId: realData.driveFileId || '',
+        imageUrl: realData.imageUrl || '',
+        createdAt: realData.createdAt || new Date().toISOString()
       };
 
-      // 2. Persist to StagePhotos sheet
-      try {
-        await this.createRecord('StagePhotos', photoRecord);
-      } catch (err) {
-        console.warn('Could not append to StagePhotos sheet, persisted locally:', err);
-      }
-
-      // 3. Update local cache
+      // 2. Update local cache and live cache
       const local = this.getLocalStagePhotos();
       const updated = [photoRecord, ...local.filter(p => p.id !== photoRecord.id)];
       this.setLocalStagePhotos(updated);
@@ -691,10 +740,9 @@ export const api = {
   },
 
   async deleteStagePhoto(id: string): Promise<{ status: string; message?: string }> {
-    try {
-      await this.deleteRecord('StagePhotos', id);
-    } catch (err) {
-      console.warn('Remote StagePhotos delete failed:', err);
+    const res = await this.deleteRecord('StagePhotos', id);
+    if (res.status !== 'success') {
+      throw new Error(res.message || 'Failed to delete stage photo from Database');
     }
     const local = this.getLocalStagePhotos().filter(p => p.id !== id);
     this.setLocalStagePhotos(local);
@@ -704,7 +752,7 @@ export const api = {
       cache.StagePhotos = cache.StagePhotos.filter(p => p.id !== id);
       this.setLiveCache(cache);
     }
-    return { status: 'success' };
+    return res;
   },
 
   /**

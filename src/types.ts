@@ -87,6 +87,7 @@ export interface StagePhoto {
   id: string;
   projectId: string;
   stageType: StageType;
+  stageCategory?: string;
   caption?: string;
   date?: string;
   driveFileId?: string;

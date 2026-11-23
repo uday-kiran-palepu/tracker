@@ -45,8 +45,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           className="absolute inset-0 w-full h-full object-cover scale-105"
         />
 
-        {/* Ultra-light 5% dark overlay (95% clear transparency) so the video is bright & clearly visible */}
-        <div className="absolute inset-0 bg-black/5 pointer-events-none" />
+        {/* 80% transparency overlay (20% dark tint) so headline, app name, and CTA are clearly readable over video */}
+        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
       </div>
 
       {/* Top Navbar */}
@@ -65,7 +65,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {isConnected ? (
             <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-md shadow-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Live Database Connected</span>
+              <span>Live</span>
             </span>
           ) : (
             <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold bg-slate-800/80 text-slate-400 border border-slate-700 backdrop-blur-md">

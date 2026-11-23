@@ -48,6 +48,7 @@ interface ProjectDetailViewProps {
   onUploadStagePhoto?: (payload: {
     projectId: string;
     stageType: StageType;
+    stageCategory?: string;
     caption?: string;
     date?: string;
     fileName: string;
@@ -1030,13 +1031,32 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setLightboxPhoto(null)}
         >
-          <button
-            onClick={() => setLightboxPhoto(null)}
-            className="absolute top-5 right-5 p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors z-50"
-            aria-label="Close Lightbox"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <div className="absolute top-5 right-5 flex items-center gap-3 z-50">
+            {isCoordinator && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const photoToDelete = lightboxPhoto.list[lightboxPhoto.index];
+                  if (confirm('Delete this photo from storage and database?')) {
+                    setLightboxPhoto(null);
+                    onDeleteDayWisePhoto?.(photoToDelete.id);
+                  }
+                }}
+                className="px-3 py-2 rounded-xl bg-rose-600/90 hover:bg-rose-600 text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-lg"
+                title="Delete photo from database"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Photo</span>
+              </button>
+            )}
+            <button
+              onClick={() => setLightboxPhoto(null)}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              aria-label="Close Lightbox"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
 
           {lightboxPhoto.list.length > 1 && (
             <>

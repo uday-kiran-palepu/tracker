@@ -15,6 +15,7 @@ interface StagePhotosSectionProps {
   onUploadStagePhoto: (payload: {
     projectId: string;
     stageType: StageType;
+    stageCategory?: string;
     caption?: string;
     date?: string;
     fileName: string;
@@ -91,10 +92,18 @@ export const StagePhotosSection: React.FC<StagePhotosSectionProps> = ({
   const projectPhotos = stagePhotos.filter(p => String(p.projectId || '').trim() === String(projectId || '').trim());
 
   const getPhotosForStage = (type: StageType): StagePhoto[] => {
-    const normType = String(type).trim().toLowerCase();
     return projectPhotos.filter(p => {
-      const pType = String(p.stageType || (p as any).stageCategory || '').trim().toLowerCase();
-      return pType === normType;
+      const cat = String(p.stageCategory ?? p.stageType ?? '').trim().toLowerCase();
+      if (type === 'Initial Stage') {
+        return cat === 'initial stage' || cat === 'initial';
+      }
+      if (type === 'Current Stage') {
+        return cat === 'current stage' || cat === 'current';
+      }
+      if (type === 'Final Stage') {
+        return cat === 'final stage' || cat === 'final';
+      }
+      return false;
     });
   };
 
@@ -119,6 +128,7 @@ export const StagePhotosSection: React.FC<StagePhotosSectionProps> = ({
         await onUploadStagePhoto({
           projectId,
           stageType: activeModalStage,
+          stageCategory: activeModalStage,
           caption: uploadCaption.trim() || `${activeModalStage} site photo`,
           date: uploadDate,
           fileName: compressed.fileName,
@@ -212,10 +222,26 @@ export const StagePhotosSection: React.FC<StagePhotosSectionProps> = ({
                 </p>
               </div>
 
-              {/* Action Pill */}
-              <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-blue-600 group-hover:text-blue-700">
-                <span>View Stage Gallery</span>
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              {/* Action Pill with View Gallery and Coordinator Add Photos */}
+              <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold">
+                <div className="flex items-center gap-1 text-blue-600 group-hover:text-blue-700">
+                  <span>View Gallery</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+                {isCoordinator && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveModalStage(stage.type);
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white text-[11px] font-bold transition-all shadow-xs cursor-pointer"
+                    title={`Add photos to ${stage.title}`}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Photos</span>
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -370,6 +396,21 @@ export const StagePhotosSection: React.FC<StagePhotosSectionProps> = ({
                             <ZoomIn className="w-5 h-5" />
                           </span>
                         </div>
+                        {isCoordinator && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm('Delete this stage photo from Database?')) {
+                                onDeleteStagePhoto(photo.id);
+                              }
+                            }}
+                            className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/60 hover:bg-rose-600 text-white backdrop-blur-md transition-colors cursor-pointer z-10"
+                            title="Delete photo"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
 
                       {/* Photo Details */}
@@ -389,7 +430,7 @@ export const StagePhotosSection: React.FC<StagePhotosSectionProps> = ({
                             <button
                               type="button"
                               onClick={() => setLightboxPhoto(photo)}
-                              className="text-[11px] font-semibold text-blue-600 hover:text-blue-700"
+                              className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
                             >
                               Expand
                             </button>
@@ -400,10 +441,11 @@ export const StagePhotosSection: React.FC<StagePhotosSectionProps> = ({
                                   onDeleteStagePhoto(photo.id);
                                 }
                               }}
-                              className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white text-[11px] font-semibold transition-colors cursor-pointer"
                               title="Delete photo"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
                             </button>
                           </div>
                         )}
@@ -436,6 +478,24 @@ export const StagePhotosSection: React.FC<StagePhotosSectionProps> = ({
           onClick={() => setLightboxPhoto(null)}
         >
           <div className="absolute top-4 right-4 flex items-center gap-3">
+            {isCoordinator && lightboxPhoto && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm('Delete this stage photo from Database?')) {
+                    const idToDelete = lightboxPhoto.id;
+                    setLightboxPhoto(null);
+                    onDeleteStagePhoto(idToDelete);
+                  }
+                }}
+                className="px-3 py-2 rounded-xl bg-rose-600/90 hover:bg-rose-600 text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-lg"
+                title="Delete photo from database"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Photo</span>
+              </button>
+            )}
             <button
               onClick={() => setLightboxPhoto(null)}
               className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"

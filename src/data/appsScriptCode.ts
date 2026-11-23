@@ -29,7 +29,7 @@ var SCHEMA = {
     'id', 'projectId', 'dayNumber', 'date', 'caption', 'driveFileId', 'imageUrl'
   ],
   StagePhotos: [
-    'id', 'projectId', 'stageType', 'caption', 'date', 'driveFileId', 'imageUrl', 'createdAt'
+    'id', 'projectId', 'stageCategory', 'stageType', 'caption', 'date', 'driveFileId', 'imageUrl', 'createdAt'
   ],
   ExecutionStages: [
     'id', 'projectId', 'phase', 'stageNumber', 'stageName', 'description', 'status', 'progress', 'subTasksJson'
@@ -335,7 +335,8 @@ function doPost(e) {
       var stagePhotoRecord = {
         id: stagePhotoId,
         projectId: payload.projectId || '',
-        stageType: payload.stageType || 'Current Stage',
+        stageCategory: payload.stageCategory || payload.stageType || 'Current Stage',
+        stageType: payload.stageType || payload.stageCategory || 'Current Stage',
         caption: payload.caption || '',
         date: payload.date || new Date().toISOString().split('T')[0],
         driveFileId: fileId,

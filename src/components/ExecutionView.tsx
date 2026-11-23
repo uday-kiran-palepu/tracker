@@ -19,6 +19,7 @@ interface ExecutionViewProps {
   onUploadStagePhoto?: (payload: {
     projectId: string;
     stageType: StageType;
+    stageCategory?: string;
     caption?: string;
     date?: string;
     fileName: string;

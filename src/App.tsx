@@ -284,6 +284,7 @@ export default function App() {
   const handleUploadStagePhoto = async (payload: {
     projectId: string;
     stageType: StageType;
+    stageCategory?: string;
     caption?: string;
     date?: string;
     fileName: string;
@@ -305,9 +306,11 @@ export default function App() {
 
   const handleDeleteStagePhoto = async (id: string) => {
     try {
+      showToast('info', 'Deleting stage photo from Database...', 'Deleting');
       await api.deleteStagePhoto(id);
       setStagePhotos(prev => prev.filter(p => p.id !== id));
       showToast('success', 'Stage photo deleted from Database.', 'Deleted');
+      syncData({ isSilent: true, fresh: true });
     } catch (err: any) {
       showToast('error', `Failed to delete stage photo: ${err.message}`, 'Delete Failed');
     }
@@ -620,13 +623,14 @@ export default function App() {
   };
 
   const handleDeleteDayWisePhoto = async (id: string) => {
-    setDayWisePhotos(dayWisePhotos.filter(p => p.id !== id));
     try {
-      await api.deleteRecord('DayWisePhotos', id);
+      showToast('info', 'Deleting photo from Database...', 'Deleting');
+      await api.deleteDayWisePhoto(id);
+      setDayWisePhotos(prev => prev.filter(p => p.id !== id));
       showToast('success', 'Photo removed from Cloud Storage & Database.', 'Deleted');
       syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
-      showToast('error', `Failed to delete photo: ${e.message}`);
+      showToast('error', `Failed to delete photo: ${e.message}`, 'Delete Failed');
     }
   };
 
