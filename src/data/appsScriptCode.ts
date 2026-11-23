@@ -1,5 +1,5 @@
 export const APPS_SCRIPT_CODE = `/**
- * Uni Tracker - Cloud Database Backend (Code.gs)
+ * Project Portal - Cloud Database Backend (Code.gs)
  * Connects Database Tables + Cloud Storage for live CRUD, Coordinator Authentication,
  * Day-Wise Photo Uploads, and Direct Document Storage.
  * 
@@ -12,7 +12,7 @@ export const APPS_SCRIPT_CODE = `/**
  *    - Execute as: "Me" (your Google account)
  *    - Who has access: "Anyone" (crucial for client-side API requests)
  * 6. Click "Deploy", authorize permissions, and copy the Web App URL.
- * 7. In Uni Tracker Settings, paste the Web App URL and click "Save & Sync Now".
+ * 7. In Project Portal Settings, paste the Web App URL and click "Save & Sync Now".
  */
 
 // Global database table column schemas
@@ -100,7 +100,7 @@ function doGet(e) {
     });
 
     // Parse AppSettings into key-value map
-    var settingsMap = { appName: 'Uni Tracker' };
+    var settingsMap = { appName: 'Project Portal' };
     if (result.AppSettings && result.AppSettings.length > 0) {
       result.AppSettings.forEach(function(item) {
         if (item.key) settingsMap[item.key] = item.value;

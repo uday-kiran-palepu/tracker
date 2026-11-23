@@ -1,5 +1,5 @@
 /**
- * Date formatting utilities for Uni Tracker
+ * Date formatting utilities for Project Portal
  * Eliminates raw ISO timestamps (e.g. '2026-11-20T18:30:00.000Z') across the entire application.
  */
 

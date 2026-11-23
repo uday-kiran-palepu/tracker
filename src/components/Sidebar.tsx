@@ -25,7 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLogout,
   mobileOpen,
   setMobileOpen,
-  appName = 'Uni Tracker',
+  appName = 'Project Portal',
   onReturnHome
 }) => {
   const navItems = [

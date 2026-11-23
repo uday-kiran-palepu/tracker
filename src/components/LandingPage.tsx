@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, ArrowRight, ShieldCheck, MapPin, Sparkles, 
-  Activity, Layers, CheckCircle2, ChevronRight 
+  Activity, Layers, CheckCircle2, ChevronRight, MessageCircle 
 } from 'lucide-react';
-import { Project } from '../types';
+import { Project, AppSettings } from '../types';
 
 interface LandingPageProps {
   appName: string;
+  appSettings?: AppSettings;
   projects: Project[];
   isConnected: boolean;
   onEnterDashboard: () => void;
@@ -26,6 +27,7 @@ const SLIDESHOW_IMAGES = [
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   appName,
+  appSettings,
   projects,
   isConnected,
   onEnterDashboard,
@@ -33,6 +35,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenMap
 }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Fallback to local portrait video if not provided in AppSettings
+  const videoSrc = appSettings?.heroVideoUrl || '/hero-video.mp4';
 
   // 1-second (1000ms) interval dynamic background slideshow
   useEffect(() => {
@@ -103,47 +108,84 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </header>
 
       {/* Center Hero Overlay */}
-      <main className="relative z-20 flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 py-12 max-w-5xl mx-auto">
+      <main className="relative z-20 flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 py-8 sm:py-12 max-w-5xl mx-auto">
         {/* Top Tagline Pill */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30 backdrop-blur-md mb-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30 backdrop-blur-md mb-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <Sparkles className="w-4 h-4 text-blue-400" />
           <span>Real-Time Campus Lab Infrastructure & Execution Portal</span>
         </div>
 
         {/* Dynamic App Title */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white drop-shadow-xl leading-tight">
-          {appName || 'Uni Tracker'}
+        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white drop-shadow-xl leading-tight">
+          {appName || 'Project Portal'}
         </h1>
 
-        <p className="mt-4 text-lg sm:text-xl font-medium text-blue-200 max-w-3xl drop-shadow leading-relaxed">
+        <p className="mt-2 text-base sm:text-lg font-medium text-blue-200 max-w-2xl drop-shadow leading-relaxed">
           Empowering Next-Gen University Labs & Campuses Across India
         </p>
 
-        <p className="mt-3 text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+        {/* Portrait Video Display */}
+        <div className="my-5 relative group">
+          {/* Ambient Glow */}
+          <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-[28px] blur-xl opacity-40 group-hover:opacity-60 transition duration-700 pointer-events-none" />
+          
+          <div className="relative w-[180px] sm:w-[220px] md:w-[240px] aspect-[9/16] rounded-[24px] overflow-hidden shadow-2xl border-2 border-white/20 bg-slate-900 mx-auto">
+            <video
+              src={videoSrc}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
+              className="w-full h-full object-cover"
+            />
+            
+            {/* Live Badge Overlay on Video */}
+            <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-[10px] font-bold text-white shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Live Cam</span>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed mb-6">
           Unified multi-campus execution monitoring, live contractor coordination, real-time stage milestones, day-wise photo logs, and asset deployment analytics.
         </p>
 
-        {/* Primary CTA Button: "View More" */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center gap-4">
+        {/* Primary CTA Buttons */}
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
           <button
             onClick={onEnterDashboard}
-            className="group px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm sm:text-base shadow-2xl shadow-blue-600/50 hover:shadow-blue-500/70 transition-all duration-300 flex items-center gap-3 transform hover:-translate-y-0.5 active:translate-y-0"
+            className="group px-7 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm sm:text-base shadow-2xl shadow-blue-600/50 hover:shadow-blue-500/70 transition-all duration-300 flex items-center gap-2.5 transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
           >
             <span>View More</span>
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
           </button>
 
           <button
             onClick={onOpenMap}
-            className="px-6 py-4 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs sm:text-sm backdrop-blur-md border border-white/20 transition-all flex items-center gap-2"
+            className="px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs sm:text-sm backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 cursor-pointer"
           >
             <MapPin className="w-4 h-4 text-blue-400" />
             <span>Explore India Campus Map</span>
           </button>
+
+          {/* WhatsApp Contact Action */}
+          {appSettings?.whatsappNumber && (
+            <a
+              href={`https://wa.me/${appSettings.whatsappNumber.replace(/[^0-9]/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs sm:text-sm shadow-xl shadow-emerald-600/30 transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>WhatsApp Team</span>
+            </a>
+          )}
         </div>
 
         {/* Slideshow Indicator Dots */}
-        <div className="flex items-center gap-1.5 mt-8">
+        <div className="flex items-center gap-1.5 mt-6">
           {SLIDESHOW_IMAGES.map((_, idx) => (
             <button
               key={idx}
@@ -158,7 +200,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </main>
 
       {/* Footer KPI Preview Bar */}
-      <footer className="relative z-20 w-full px-4 sm:px-8 py-5 border-t border-white/10 backdrop-blur-md bg-slate-950/50">
+      <footer className="relative z-20 w-full px-4 sm:px-8 py-4 sm:py-5 border-t border-white/10 backdrop-blur-md bg-slate-950/50">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Quick Stats Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8 w-full md:w-auto text-center md:text-left">
@@ -190,7 +232,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span>Coordinator Sign In</span>
             </button>
             <span className="text-xs text-slate-500 hidden sm:inline">•</span>
-            <span className="text-xs text-slate-400 hidden sm:inline">© 2026 {appName || 'Uni Tracker'}</span>
+            <span className="text-xs text-slate-400 hidden sm:inline">© 2026 {appName || 'Project Portal'}</span>
           </div>
         </div>
       </footer>

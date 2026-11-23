@@ -22,7 +22,7 @@ import { Building2, RefreshCw } from 'lucide-react';
 
 import {
   Project, ExecutionStageItem, MaterialItem, ManpowerItem, ApprovalItem,
-  DocumentItem, PhotoItem, SiteUpdateItem, User, DayWiseReport, DayWisePhoto, DatabaseMeta
+  DocumentItem, PhotoItem, SiteUpdateItem, User, DayWiseReport, DayWisePhoto, DatabaseMeta, AppSettings
 } from './types';
 import { api } from './services/api';
 
@@ -30,6 +30,7 @@ export default function App() {
   // Navigation & Landing View State
   const [showLanding, setShowLanding] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [appSettings, setAppSettings] = useState<AppSettings>(() => api.getAppSettings());
   const [appName, setAppName] = useState<string>(() => api.getAppName());
   const [currentUser, setCurrentUser] = useState<User>(api.getCurrentUser());
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -39,8 +40,8 @@ export default function App() {
   const initialCache = api.getLiveCache();
 
   // Live Backend & Loading State
-  // Only show full-screen spinner if initialCache is completely empty
-  const [isLoading, setIsLoading] = useState<boolean>(() => !initialCache || !initialCache.Projects || initialCache.Projects.length === 0);
+  // Full-screen blocking loader removed: landing page opens immediately in 0ms
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(() => Boolean(initialCache && initialCache.Projects && initialCache.Projects.length > 0));
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>(api.getLastSyncTime());
@@ -63,7 +64,9 @@ export default function App() {
 
   // Sync document title with dynamic appName
   useEffect(() => {
-    document.title = `${appName} - Real-Time Campus Execution Tracker`;
+    if (appName) {
+      document.title = appName;
+    }
   }, [appName]);
 
   // Main 8 Database Tables State - hydrated immediately from SWR cache (0ms instant startup)
@@ -136,8 +139,12 @@ export default function App() {
         setIsConnected(true);
         setLastSyncTime(api.getLastSyncTime());
 
-        if (result.AppSettings?.appName) {
-          setAppName(result.AppSettings.appName);
+        if (result.AppSettings) {
+          setAppSettings(result.AppSettings);
+          if (result.AppSettings.appName) {
+            setAppName(result.AppSettings.appName);
+            document.title = result.AppSettings.appName;
+          }
         }
       }
     } catch (err: any) {
@@ -156,18 +163,16 @@ export default function App() {
 
   // App Startup & Silent Background Auto-Sync
   useEffect(() => {
-    // 1. If SWR cache exists, UI renders in 0ms and we silently revalidate in the background.
-    // If first visit (no cache), show full-screen spinner while fetching.
-    const hasLiveCache = Boolean(initialCache && initialCache.Projects && initialCache.Projects.length > 0);
-    syncData({ isSilent: hasLiveCache, fresh: false });
+    // Landing page opens immediately in 0ms; silently fetch live database in background
+    syncData({ isSilent: true, fresh: false });
 
-    // 2. Re-sync automatically when browser tab regains focus
+    // Re-sync automatically when browser tab regains focus
     const handleFocus = () => {
       syncData({ isSilent: true, fresh: false });
     };
     window.addEventListener('focus', handleFocus);
 
-    // 3. Silent background auto-sync every 60 seconds
+    // Silent background auto-sync every 60 seconds
     const intervalId = setInterval(() => {
       syncData({ isSilent: true, fresh: false });
     }, 60000);
@@ -176,7 +181,7 @@ export default function App() {
       window.removeEventListener('focus', handleFocus);
       clearInterval(intervalId);
     };
-  }, [syncData, initialCache]);
+  }, [syncData]);
 
   // Auth Handlers
   const handleLogin = (user: User) => {
@@ -226,6 +231,25 @@ export default function App() {
       return false;
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  // Global App Settings Handler (App Name, WhatsApp, Hero Video)
+  const handleUpdateAppSettings = async (newSettings: { appName: string; whatsappNumber?: string; heroVideoUrl?: string }) => {
+    setAppName(newSettings.appName);
+    setAppSettings(newSettings);
+    document.title = newSettings.appName;
+
+    // Optimistic UI update
+    api.setAppSettings(newSettings);
+
+    showToast('info', 'Saving settings globally to live database...', 'Saving Settings');
+    try {
+      await api.updateAppSettings(newSettings);
+      showToast('success', 'Application settings saved to database and synced across all devices!', 'Saved Globally');
+      syncData({ isSilent: true, fresh: true });
+    } catch (err: any) {
+      showToast('error', `Failed to update settings: ${err.message}`, 'Sync Error');
     }
   };
 
@@ -561,33 +585,13 @@ export default function App() {
     }
   };
 
-  // Startup Loading Spinner
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 bg-[#0B1528] flex flex-col items-center justify-center text-white p-6 z-50 select-none">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
-            <Building2 className="w-6 h-6 text-blue-400 animate-pulse" />
-          </div>
-          <span className="text-xl font-black tracking-tight text-white">{appName}</span>
-        </div>
-        <div className="flex items-center gap-3 text-sm text-slate-300 font-medium">
-          <RefreshCw className="w-5 h-5 text-blue-400 animate-spin" />
-          <span>Connecting to live database & syncing campus records...</span>
-        </div>
-        <div className="mt-5 w-56 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-          <div className="h-full bg-blue-500 rounded-full animate-pulse w-3/4" />
-        </div>
-      </div>
-    );
-  }
-
-  // If initial landing screen is visible, render Full-Screen Landing Homepage
+  // Render Landing Page immediately on open (0ms startup with zero blocking splash)
   if (showLanding) {
     return (
       <>
         <LandingPage
           appName={appName}
+          appSettings={appSettings}
           projects={projects}
           isConnected={isConnected}
           onEnterDashboard={() => setShowLanding(false)}
@@ -774,6 +778,8 @@ export default function App() {
                   isConnected={isConnected}
                   lastSyncTime={lastSyncTime}
                   appName={appName}
+                  appSettings={appSettings}
+                  onUpdateAppSettings={handleUpdateAppSettings}
                   onUpdateAppName={(name) => setAppName(name)}
                   onUpdateCurrentUser={(u) => setCurrentUser(u)}
                   databaseMeta={databaseMeta}

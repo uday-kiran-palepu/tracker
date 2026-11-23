@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  BarChart3, Download, Printer, Users, Package, FileCheck2, TrendingUp, Building2 
+import {
+  BarChart3, Download, Printer, Users, Package, FileCheck2, TrendingUp, Building2
 } from 'lucide-react';
 import { Project, MaterialItem, ManpowerItem, ApprovalItem } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -21,8 +21,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
 
   const filteredProjects = useMemo(() => {
-    return selectedProjectId === 'all' 
-      ? projects 
+    return selectedProjectId === 'all'
+      ? projects
       : projects.filter(p => p.id === selectedProjectId);
   }, [projects, selectedProjectId]);
 

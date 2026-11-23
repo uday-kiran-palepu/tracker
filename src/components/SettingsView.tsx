@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Settings, CheckCircle2, AlertCircle, RefreshCw, 
   Code, ShieldCheck, UserCircle, ExternalLink, Database, 
-  Sparkles, Lock, Save, ArrowRight, Layers, Check 
+  Sparkles, Lock, Save, ArrowRight, Layers, Check, Phone, Video 
 } from 'lucide-react';
-import { User, DatabaseMeta } from '../types';
+import { User, DatabaseMeta, AppSettings } from '../types';
 
 interface SettingsViewProps {
   currentUser: User;
@@ -15,6 +15,8 @@ interface SettingsViewProps {
   isConnected: boolean;
   lastSyncTime: string;
   appName: string;
+  appSettings?: AppSettings;
+  onUpdateAppSettings?: (settings: { appName: string; whatsappNumber?: string; heroVideoUrl?: string }) => void;
   onUpdateAppName: (name: string) => void;
   onUpdateCurrentUser: (user: User) => void;
   databaseMeta: DatabaseMeta;
@@ -31,6 +33,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   isConnected,
   lastSyncTime,
   appName,
+  appSettings,
+  onUpdateAppSettings,
   onUpdateAppName,
   onUpdateCurrentUser,
   databaseMeta,
@@ -45,9 +49,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [isSwitching, setIsSwitching] = useState(false);
   const [switchFeedback, setSwitchFeedback] = useState<{ status: 'success' | 'error'; message: string } | null>(null);
 
-  // App Name state
-  const [appNameInput, setAppNameInput] = useState(appName);
+  // App Settings state (App Name, WhatsApp, Hero Video)
+  const [appNameInput, setAppNameInput] = useState(appName || appSettings?.appName || '');
+  const [whatsappInput, setWhatsappInput] = useState(appSettings?.whatsappNumber || '');
+  const [heroVideoUrlInput, setHeroVideoUrlInput] = useState(appSettings?.heroVideoUrl || '');
   const [appNameFeedback, setAppNameFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (appName) setAppNameInput(appName);
+    if (appSettings?.whatsappNumber !== undefined) setWhatsappInput(appSettings.whatsappNumber);
+    if (appSettings?.heroVideoUrl !== undefined) setHeroVideoUrlInput(appSettings.heroVideoUrl);
+  }, [appName, appSettings]);
 
   // Profile fields state
   const [profileName, setProfileName] = useState(currentUser.name);
@@ -96,12 +108,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const handleSaveAppName = (e: React.FormEvent) => {
+  const handleSaveAppSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    const clean = appNameInput.trim() || 'Uni Tracker';
+    const clean = appNameInput.trim() || 'Project Portal';
+    const cleanWhatsApp = whatsappInput.trim();
+    const cleanVideo = heroVideoUrlInput.trim();
     setAppNameFeedback(null);
-    onUpdateAppName(clean);
-    setAppNameFeedback('Application branding updated successfully!');
+    if (onUpdateAppSettings) {
+      onUpdateAppSettings({
+        appName: clean,
+        whatsappNumber: cleanWhatsApp,
+        heroVideoUrl: cleanVideo
+      });
+    } else {
+      onUpdateAppName(clean);
+    }
+    setAppNameFeedback('Application branding & global settings saved to live database!');
     setTimeout(() => setAppNameFeedback(null), 3500);
   };
 
@@ -306,40 +328,71 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-blue-600" />
-            <span>App Branding & Customization</span>
+            <span>App Branding & Global Settings</span>
           </h3>
-          <p className="text-xs text-slate-500">Customize the application display name shown across the top navigation, landing homepage, and browser tab.</p>
+          <p className="text-xs text-slate-500">
+            Customize the application branding, WhatsApp contact number, and landing page portrait hero video synced globally across all devices.
+          </p>
 
-          <form onSubmit={handleSaveAppName} className="space-y-3">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1">
+          <form onSubmit={handleSaveAppSettings} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Application Name</label>
                 <input
                   type="text"
                   value={appNameInput}
                   onChange={(e) => setAppNameInput(e.target.value)}
-                  placeholder="Uni Tracker"
+                  placeholder="Project Portal"
                   required
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-semibold focus:outline-none focus:border-blue-500"
                 />
               </div>
-              <div className="self-end">
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>Save App Name</span>
-                </button>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>WhatsApp Contact Number</span>
+                </label>
+                <input
+                  type="text"
+                  value={whatsappInput}
+                  onChange={(e) => setWhatsappInput(e.target.value)}
+                  placeholder="+91 98765 43210"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-semibold focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                  <Video className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Hero Portrait Video URL</span>
+                </label>
+                <input
+                  type="text"
+                  value={heroVideoUrlInput}
+                  onChange={(e) => setHeroVideoUrlInput(e.target.value)}
+                  placeholder="/hero-video.mp4 or https://..."
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-semibold focus:outline-none focus:border-blue-500"
+                />
               </div>
             </div>
 
-            {appNameFeedback && (
-              <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1.5 animate-in fade-in">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{appNameFeedback}</span>
-              </p>
-            )}
+            <div className="flex items-center justify-between pt-2">
+              <button
+                type="submit"
+                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/30 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Save Application Settings</span>
+              </button>
+
+              {appNameFeedback && (
+                <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1.5 animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{appNameFeedback}</span>
+                </p>
+              )}
+            </div>
           </form>
         </div>
       )}

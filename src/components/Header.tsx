@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   setOrgName,
   isConnected = false,
   isSyncing = false,
-  appName = 'Uni Tracker',
+  appName = 'Project Portal',
   onReturnHome
 }) => {
   const [showOrgDropdown, setShowOrgDropdown] = useState(false);

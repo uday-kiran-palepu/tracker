@@ -21,6 +21,7 @@ const STORAGE_KEYS = {
   CURRENT_USER: 'unitracker_current_user',
   LAST_SYNC_TIME: 'unitracker_last_sync_time',
   APP_NAME: 'unitracker_app_name',
+  APP_SETTINGS: 'unitracker_app_settings',
   DATABASE_META: 'unitracker_db_meta'
 };
 
@@ -75,16 +76,40 @@ export const api = {
   },
 
   /**
-   * Dynamic App Name management
+   * Dynamic App Settings & Name management
    */
+  getAppSettings(): AppSettings {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.APP_SETTINGS);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    const live = this.getLiveCache();
+    if (live?.AppSettings) return live.AppSettings;
+    return {
+      appName: localStorage.getItem(STORAGE_KEYS.APP_NAME) || 'Project Portal',
+      whatsappNumber: '',
+      heroVideoUrl: ''
+    };
+  },
+
+  setAppSettings(settings: AppSettings) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.APP_SETTINGS, JSON.stringify(settings));
+      if (settings.appName) {
+        this.setAppName(settings.appName);
+      }
+    } catch (e) {}
+  },
+
   getAppName(): string {
-    return localStorage.getItem(STORAGE_KEYS.APP_NAME) || 'Uni Tracker';
+    const settings = this.getAppSettings();
+    return settings.appName || localStorage.getItem(STORAGE_KEYS.APP_NAME) || 'Project Portal';
   },
 
   setAppName(name: string) {
     if (name && name.trim()) {
       localStorage.setItem(STORAGE_KEYS.APP_NAME, name.trim());
-      document.title = `${name.trim()} - India Campus Expansion Tracker`;
+      document.title = name.trim();
     }
   },
 
@@ -295,11 +320,16 @@ export const api = {
         DatabaseMeta: d.DatabaseMeta || {
           name: d.DatabaseMeta?.name || 'Main Execution Database',
           sheetUrl: d.DatabaseMeta?.sheetUrl || ''
+        },
+        AppSettings: d.AppSettings || {
+          appName: this.getAppName(),
+          whatsappNumber: '',
+          heroVideoUrl: ''
         }
       };
 
-      if (d.AppSettings?.appName) {
-        this.setAppName(d.AppSettings.appName);
+      if (d.AppSettings) {
+        this.setAppSettings(d.AppSettings);
       }
 
       // Cache in SWR storage and local state
@@ -431,17 +461,33 @@ export const api = {
   },
 
   /**
-   * Update App Settings (e.g. App Name)
+   * Update App Settings (e.g. App Name, WhatsApp Number, Hero Video URL)
    */
-  async updateAppSettings(settings: { appName: string }): Promise<void> {
-    this.setAppName(settings.appName);
+  async updateAppSettings(settings: AppSettings): Promise<{ status: string; message?: string }> {
+    this.setAppSettings(settings);
+    if (settings.appName) {
+      this.setAppName(settings.appName);
+    }
+
+    // Immediately update SWR cache in localStorage
+    const currentCache = this.getLiveCache();
+    if (currentCache) {
+      currentCache.AppSettings = {
+        ...(currentCache.AppSettings || {}),
+        ...settings
+      };
+      this.setLiveCache(currentCache);
+    }
+
     try {
-      await this.postToScript({
+      const res = await this.postToScript<{ status: string; message?: string }>({
         action: 'updateAppSettings',
         settings
       });
+      return res;
     } catch (e) {
       console.warn('Failed to sync app settings to database:', e);
+      throw e;
     }
   },
 

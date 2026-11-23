@@ -200,6 +200,8 @@ export interface User {
 
 export interface AppSettings {
   appName?: string;
+  whatsappNumber?: string;
+  heroVideoUrl?: string;
 }
 
 export interface DatabaseMeta {
