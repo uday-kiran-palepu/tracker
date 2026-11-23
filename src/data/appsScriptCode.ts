@@ -20,7 +20,7 @@ var SCHEMA = {
   Projects: [
     'id', 'name', 'labCode', 'city', 'state', 'areaSft', 'status', 'health', 
     'progress', 'startDate', 'targetDate', 'heroImageUrl', 'lat', 'lng', 'mapsUrl',
-    'budgetAllocated', 'budgetSpent', 'civilProgress', 'mepProgress', 'furnitureProgress', 'brandingProgress'
+    'pocName', 'pocPhone', 'budgetAllocated', 'budgetSpent', 'civilProgress', 'mepProgress', 'furnitureProgress', 'brandingProgress'
   ],
   DayWiseReports: [
     'id', 'projectId', 'dayNumber', 'date', 'workSummary', 'workersCount', 'materialsUsed', 'updatedBy'
@@ -28,8 +28,11 @@ var SCHEMA = {
   DayWisePhotos: [
     'id', 'projectId', 'dayNumber', 'date', 'caption', 'driveFileId', 'imageUrl'
   ],
+  StagePhotos: [
+    'id', 'projectId', 'stageType', 'caption', 'date', 'driveFileId', 'imageUrl', 'createdAt'
+  ],
   ExecutionStages: [
-    'id', 'projectId', 'phase', 'stageNumber', 'stageName', 'status', 'progress', 'subTasksJson'
+    'id', 'projectId', 'phase', 'stageNumber', 'stageName', 'description', 'status', 'progress', 'subTasksJson'
   ],
   Materials: [
     'id', 'projectId', 'itemName', 'category', 'requiredQty', 'deliveredQty', 'unit', 'status'
@@ -311,6 +314,40 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({
         status: 'success',
         data: photoRecord
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 5b. ACTION: UPLOAD STAGE PHOTO (INITIAL / CURRENT / FINAL STAGE)
+    if (action === 'uploadStagePhoto') {
+      var folder = getOrCreateFolder(DRIVE_FOLDER_NAME);
+      var bytes = Utilities.base64Decode(payload.base64Data);
+      var mimeType = payload.mimeType || 'image/jpeg';
+      var fileName = payload.fileName || (String(payload.stageType || 'stage').toLowerCase().replace(/\s+/g, '_') + '_' + Date.now() + '.jpg');
+      
+      var blob = Utilities.newBlob(bytes, mimeType, fileName);
+      var file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+      var fileId = file.getId();
+      var imageUrl = 'https://drive.google.com/uc?export=view&id=' + fileId;
+      var stagePhotoId = 'sph-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+
+      var stagePhotoRecord = {
+        id: stagePhotoId,
+        projectId: payload.projectId || '',
+        stageType: payload.stageType || 'Current Stage',
+        caption: payload.caption || '',
+        date: payload.date || new Date().toISOString().split('T')[0],
+        driveFileId: fileId,
+        imageUrl: imageUrl,
+        createdAt: new Date().toISOString()
+      };
+
+      appendRecordToSheet(ss, 'StagePhotos', stagePhotoRecord);
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        data: stagePhotoRecord
       })).setMimeType(ContentService.MimeType.JSON);
     }
 

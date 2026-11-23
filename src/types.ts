@@ -29,6 +29,8 @@ export interface Project {
   mapsUrl?: string;
   budgetAllocated?: number | string;
   budgetSpent?: number | string;
+  pocName?: string; // NxtWave Executive POC Name
+  pocPhone?: string | number; // NxtWave Executive POC Phone Number
 
   // UI helper / backward-compatibility aliases
   code?: string;
@@ -75,6 +77,23 @@ export interface DayWisePhoto {
   imageUrl: string;
 }
 
+export type StageType = 'Initial Stage' | 'Current Stage' | 'Final Stage';
+
+/**
+ * StagePhotos Sheet Schema:
+ * id, projectId, stageType, caption, date, driveFileId, imageUrl, createdAt
+ */
+export interface StagePhoto {
+  id: string;
+  projectId: string;
+  stageType: StageType;
+  caption?: string;
+  date?: string;
+  driveFileId?: string;
+  imageUrl: string;
+  createdAt?: string;
+}
+
 export interface ExecutionSubTask {
   id: string;
   name: string;
@@ -91,6 +110,7 @@ export interface ExecutionStageItem {
   phase: string;
   stageNumber: number;
   stageName: string;
+  description?: string; // Scope of Work for this stage
   status: 'Pending' | 'In Progress' | 'Completed';
   progress: number;
   subTasksJson: string; // JSON string of ExecutionSubTask[]
@@ -220,6 +240,7 @@ export interface AllDataResponse {
   Manpower: ManpowerItem[];
   Approvals: ApprovalItem[];
   Documents: DocumentItem[];
+  StagePhotos?: StagePhoto[];
   AppSettings?: AppSettings;
   DatabaseMeta?: DatabaseMeta;
 }

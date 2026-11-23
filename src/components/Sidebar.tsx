@@ -35,7 +35,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'execution', label: 'Execution', icon: Activity },
     { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
     { id: 'approvals', label: 'Approvals & NOC', icon: FileCheck2 },
-    { id: 'documents', label: 'Documents & BOQ', icon: FolderOpen },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
 

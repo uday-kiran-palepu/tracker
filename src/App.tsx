@@ -18,12 +18,14 @@ import {
   EditDayWiseReportModal, AddExecutionStageModal, EditExecutionStageModal,
   AddManpowerModal, EditManpowerModal
 } from './components/Modals';
-import { Building2, RefreshCw } from 'lucide-react';
+import { Building2, RefreshCw, MessageCircle } from 'lucide-react';
 
 import {
   Project, ExecutionStageItem, MaterialItem, ManpowerItem, ApprovalItem,
-  DocumentItem, PhotoItem, SiteUpdateItem, User, DayWiseReport, DayWisePhoto, DatabaseMeta, AppSettings
+  DocumentItem, PhotoItem, SiteUpdateItem, User, DayWiseReport, DayWisePhoto, DatabaseMeta, AppSettings,
+  StagePhoto, StageType
 } from './types';
+import { createDefaultStagesForProject } from './data/fixedStages';
 import { api } from './services/api';
 
 export default function App() {
@@ -78,6 +80,7 @@ export default function App() {
   const [manpower, setManpower] = useState<ManpowerItem[]>(() => initialCache?.Manpower || []);
   const [approvals, setApprovals] = useState<ApprovalItem[]>(() => initialCache?.Approvals || []);
   const [documents, setDocuments] = useState<DocumentItem[]>(() => initialCache?.Documents || []);
+  const [stagePhotos, setStagePhotos] = useState<StagePhoto[]>(() => initialCache?.StagePhotos || api.getLocalStagePhotos());
   const [siteUpdates, setSiteUpdates] = useState<SiteUpdateItem[]>([]);
 
   // Selected project for detail view
@@ -131,6 +134,7 @@ export default function App() {
         setManpower(result.Manpower || []);
         setApprovals(result.Approvals || []);
         setDocuments(result.Documents || []);
+        setStagePhotos(result.StagePhotos || api.getLocalStagePhotos());
 
         if (result.DatabaseMeta) {
           setDatabaseMeta(result.DatabaseMeta);
@@ -257,14 +261,54 @@ export default function App() {
   const handleAddProject = async (newProj: Project) => {
     const updated = [newProj, ...projects];
     setProjects(updated);
-    showToast('info', 'Saving campus to Database...', 'Adding Project');
+
+    // Auto-generate all 21 execution stages for the new campus project
+    const defaultStages = createDefaultStagesForProject(newProj.id);
+    setExecutionStages(prev => [...defaultStages, ...prev]);
+
+    showToast('info', 'Saving campus & 21 execution stages to Database...', 'Adding Project');
 
     try {
       await api.createRecord('Projects', newProj);
-      showToast('success', `Campus "${newProj.name}" created and synced to Database!`, 'Saved to Database');
+      // Asynchronously sync all 21 execution stages
+      for (const st of defaultStages) {
+        api.createRecord('ExecutionStages', st).catch(e => console.warn('Stage auto-sync error:', e));
+      }
+      showToast('success', `Campus "${newProj.name}" created with 21 execution stages!`, 'Saved to Database');
       syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
       showToast('error', `Failed to sync project to Database: ${e.message}`);
+    }
+  };
+
+  const handleUploadStagePhoto = async (payload: {
+    projectId: string;
+    stageType: StageType;
+    caption?: string;
+    date?: string;
+    fileName: string;
+    mimeType: string;
+    base64Data: string;
+  }) => {
+    try {
+      const res = await api.uploadStagePhoto(payload);
+      if (res.data) {
+        setStagePhotos(prev => [res.data!, ...prev.filter(p => p.id !== res.data!.id)]);
+        showToast('success', `${payload.stageType} photo uploaded successfully!`, 'Uploaded');
+      }
+    } catch (err: any) {
+      showToast('error', `Failed to upload photo: ${err.message}`, 'Upload Failed');
+      throw err;
+    }
+  };
+
+  const handleDeleteStagePhoto = async (id: string) => {
+    try {
+      await api.deleteStagePhoto(id);
+      setStagePhotos(prev => prev.filter(p => p.id !== id));
+      showToast('success', 'Stage photo deleted from Database.', 'Deleted');
+    } catch (err: any) {
+      showToast('error', `Failed to delete stage photo: ${err.message}`, 'Delete Failed');
     }
   };
 
@@ -660,6 +704,7 @@ export default function App() {
               photos={[]}
               dayWiseReports={dayWiseReports}
               dayWisePhotos={dayWisePhotos}
+              stagePhotos={stagePhotos}
               siteUpdates={siteUpdates}
               onOpenAddMaterial={() => setAddMaterialModalOpen(true)}
               onOpenAddDoc={() => setAddDocumentModalOpen(true)}
@@ -672,6 +717,8 @@ export default function App() {
               onDeleteDocument={handleDeleteDocument}
               onDeleteDayWiseReport={handleDeleteDayWiseReport}
               onDeleteDayWisePhoto={handleDeleteDayWisePhoto}
+              onUploadStagePhoto={handleUploadStagePhoto}
+              onDeleteStagePhoto={handleDeleteStagePhoto}
               onOpenEditDayWiseReport={(report) => {
                 setReportToEdit(report);
                 setEditDayWiseModalOpen(true);
@@ -729,6 +776,7 @@ export default function App() {
                   projects={projects}
                   executionStages={executionStages}
                   currentUser={currentUser}
+                  stagePhotos={stagePhotos}
                   onUpdateStageStatus={handleUpdateStageStatus}
                   onToggleSubTask={handleToggleSubTask}
                   onOpenAddStage={() => setAddStageModalOpen(true)}
@@ -737,6 +785,8 @@ export default function App() {
                     setEditStageModalOpen(true);
                   }}
                   onDeleteStage={handleDeleteStage}
+                  onUploadStagePhoto={handleUploadStagePhoto}
+                  onDeleteStagePhoto={handleDeleteStagePhoto}
                 />
               )}
 
@@ -904,6 +954,21 @@ export default function App() {
         preselectedProjectId={selectedProject?.id}
         onAdd={handleAddDocument}
       />
+
+      {/* Global Floating WhatsApp Support Button Across All Pages */}
+      <a
+        href={`https://wa.me/${String(appSettings?.whatsappNumber || '919876543210').replace(/\D/g, '')}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Contact support on WhatsApp"
+        className="fixed bottom-5 right-5 z-50 p-3.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-2xl hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center group cursor-pointer border-2 border-white/20"
+        title="Chat with Execution Support on WhatsApp"
+      >
+        <MessageCircle className="w-6 h-6 text-white" />
+        <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs transition-all duration-300 ease-in-out text-xs font-bold pl-0 group-hover:pl-2">
+          WhatsApp Support
+        </span>
+      </a>
     </div>
   );
 }

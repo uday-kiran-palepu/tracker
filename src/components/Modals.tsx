@@ -287,6 +287,8 @@ export const AddProjectModal: React.FC<{
   const [lat, setLat] = useState(17.3850);
   const [lng, setLng] = useState(78.4867);
   const [mapsUrl, setMapsUrl] = useState('');
+  const [pocName, setPocName] = useState('Charan Sai');
+  const [pocPhone, setPocPhone] = useState('+91 98765 43210');
   const [budgetAllocated, setBudgetAllocated] = useState(25000000);
   const [budgetSpent, setBudgetSpent] = useState(5000000);
   const [civilProgress, setCivilProgress] = useState(30);
@@ -316,6 +318,8 @@ export const AddProjectModal: React.FC<{
       lat: Number(lat),
       lng: Number(lng),
       mapsUrl: mapsUrl.trim() || `https://www.google.com/maps/search/?api=1&query=${Number(lat)},${Number(lng)}`,
+      pocName,
+      pocPhone,
       budgetAllocated: Number(budgetAllocated),
       budgetSpent: Number(budgetSpent),
       civilProgress: Number(civilProgress),
@@ -414,6 +418,18 @@ export const AddProjectModal: React.FC<{
           </div>
         </div>
 
+        {/* NxtWave Executive POC Details */}
+        <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-blue-50/50 border border-blue-100">
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">NxtWave Executive POC Name</label>
+            <input type="text" value={pocName} onChange={e => setPocName(e.target.value)} required placeholder="e.g. Charan Sai" className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200" />
+          </div>
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">POC Phone Number</label>
+            <input type="text" value={pocPhone} onChange={e => setPocPhone(e.target.value)} required placeholder="e.g. +91 98765 43210" className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200" />
+          </div>
+        </div>
+
         {/* Geographic Coordinates & Google Maps Link */}
         <div className="grid grid-cols-3 gap-3">
           <div>
@@ -487,6 +503,8 @@ export const EditProjectModal: React.FC<{
   const [lat, setLat] = useState(project.lat);
   const [lng, setLng] = useState(project.lng);
   const [mapsUrl, setMapsUrl] = useState(project.mapsUrl || '');
+  const [pocName, setPocName] = useState(project.pocName || '');
+  const [pocPhone, setPocPhone] = useState(String(project.pocPhone || ''));
   const [civilProgress, setCivilProgress] = useState(project.civilProgress ?? 0);
   const [mepProgress, setMepProgress] = useState(project.mepProgress ?? 0);
   const [furnitureProgress, setFurnitureProgress] = useState(project.furnitureProgress ?? 0);
@@ -515,6 +533,8 @@ export const EditProjectModal: React.FC<{
       lat: Number(lat),
       lng: Number(lng),
       mapsUrl: mapsUrl.trim() || `https://www.google.com/maps/search/?api=1&query=${Number(lat)},${Number(lng)}`,
+      pocName,
+      pocPhone,
       heroImageUrl,
       heroImage: heroImageUrl,
       civilProgress: Number(civilProgress),
@@ -608,6 +628,18 @@ export const EditProjectModal: React.FC<{
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Budget Spent (₹)</label>
             <input type="number" min={0} value={budgetSpent} onChange={e => setBudgetSpent(Number(e.target.value))} required className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 font-semibold" />
+          </div>
+        </div>
+
+        {/* NxtWave Executive POC Details */}
+        <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-blue-50/50 border border-blue-100">
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">NxtWave Executive POC Name</label>
+            <input type="text" value={pocName} onChange={e => setPocName(e.target.value)} required placeholder="e.g. Charan Sai" className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200" />
+          </div>
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">POC Phone Number</label>
+            <input type="text" value={pocPhone} onChange={e => setPocPhone(e.target.value)} required placeholder="e.g. +91 98765 43210" className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200" />
           </div>
         </div>
 
@@ -1643,11 +1675,6 @@ export const AddApprovalModal: React.FC<{
               <option value="Rejected">Rejected</option>
             </select>
           </div>
-        </div>
-
-        <div>
-          <label className="block font-semibold text-slate-700 mb-1">Document URL</label>
-          <input type="url" value={documentUrl} onChange={e => setDocumentUrl(e.target.value)} required placeholder="https://drive.google.com/..." className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200" />
         </div>
 
         <button type="submit" className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold shadow-md shadow-blue-600/30 transition-all mt-4">

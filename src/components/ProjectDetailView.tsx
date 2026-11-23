@@ -3,13 +3,15 @@ import {
   ArrowLeft, MapPin, Calendar, Users, FileText, ImageIcon, 
   Layers, Package, CheckCircle2, Clock, Plus, ExternalLink, Trash2, 
   ShieldCheck, AlertCircle, Building2, ChevronLeft, ChevronRight, X, Sparkles, 
-  AlertTriangle, DollarSign, Wallet, TrendingUp, Edit3 
+  AlertTriangle, DollarSign, Wallet, TrendingUp, Edit3, Upload, Phone, PhoneCall,
+  UserCheck, Camera
 } from 'lucide-react';
 import { 
   Project, User, ExecutionStageItem, MaterialItem, ManpowerItem, DocumentItem, 
-  PhotoItem, SiteUpdateItem, DayWiseReport, DayWisePhoto 
+  PhotoItem, SiteUpdateItem, DayWiseReport, DayWisePhoto, StagePhoto, StageType 
 } from '../types';
 import { formatDate } from '../utils/date';
+import { StagePhotosSection } from './StagePhotosSection';
 
 interface ProjectDetailViewProps {
   project: Project;
@@ -22,6 +24,7 @@ interface ProjectDetailViewProps {
   photos: PhotoItem[];
   dayWiseReports: DayWiseReport[];
   dayWisePhotos: DayWisePhoto[];
+  stagePhotos?: StagePhoto[];
   siteUpdates: SiteUpdateItem[];
   onOpenAddMaterial: () => void;
   onOpenAddDoc: () => void;
@@ -41,6 +44,16 @@ interface ProjectDetailViewProps {
   onOpenAddManpower?: () => void;
   onOpenEditManpower?: (mp: ManpowerItem) => void;
   onDeleteManpower?: (id: string) => void;
+  onUploadStagePhoto?: (payload: {
+    projectId: string;
+    stageType: StageType;
+    caption?: string;
+    date?: string;
+    fileName: string;
+    mimeType: string;
+    base64Data: string;
+  }) => Promise<void>;
+  onDeleteStagePhoto?: (id: string) => Promise<void>;
 }
 
 export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
@@ -54,6 +67,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   photos,
   dayWiseReports,
   dayWisePhotos,
+  stagePhotos = [],
   siteUpdates,
   onOpenAddMaterial,
   onOpenAddDoc,
@@ -72,9 +86,11 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   onDeleteStage,
   onOpenAddManpower,
   onOpenEditManpower,
-  onDeleteManpower
+  onDeleteManpower,
+  onUploadStagePhoto,
+  onDeleteStagePhoto
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'progress' | 'execution' | 'materials' | 'manpower' | 'documents' | 'photos'>('overview');
+  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'progress' | 'execution' | 'materials' | 'manpower' | 'photos'>('overview');
   const [expandedStageId, setExpandedStageId] = useState<string | null>(null);
 
   const isCoordinator = currentUser.role === 'Project Coordinator';
@@ -221,7 +237,6 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             { id: 'execution', label: 'Execution Stages', icon: Layers },
             { id: 'materials', label: 'Materials & Stock', icon: Package },
             { id: 'manpower', label: 'Manpower', icon: Users },
-            { id: 'documents', label: `Documents (${projDocs.length})`, icon: FileText },
             { id: 'photos', label: `Day-Wise Photos (${projDayPhotos.length})`, icon: ImageIcon }
           ].map((tab) => {
             const Icon = tab.icon;
@@ -246,7 +261,8 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
 
       {/* SUB-TAB 1: OVERVIEW & BUDGET */}
       {activeSubTab === 'overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left 2 cols: Hero Image, Work Packages & Budget Progress */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
@@ -396,17 +412,50 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
               </div>
             </div>
 
+            {/* NxtWave Executive POC Card */}
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-              <h3 className="text-base font-bold text-slate-900 mb-3">Live Sync Status</h3>
-              <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-100 text-xs text-blue-900 flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold">Cloud Database Connected</p>
-                  <p className="text-blue-700 mt-0.5">All changes to this campus automatically synchronize with the central database.</p>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-bold text-slate-900">NxtWave Executive POC</h3>
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
+                  Assigned Lead
+                </span>
+              </div>
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
+                    {(project.pocName || 'NW').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-bold text-slate-900 truncate">{project.pocName || 'Not Assigned'}</h4>
+                    <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
+                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{String(project.pocPhone || 'Not Provided')}</span>
+                    </p>
+                  </div>
                 </div>
+                {project.pocPhone && (
+                  <a
+                    href={`tel:${String(project.pocPhone).replace(/[^\d+]/g, '')}`}
+                    className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 transition-all flex items-center justify-center shrink-0"
+                    title={`Call ${project.pocName || 'Executive POC'}`}
+                  >
+                    <PhoneCall className="w-4 h-4" />
+                  </a>
+                )}
               </div>
             </div>
           </div>
+        </div>
+
+          {/* Reusable Stage Photos Section */}
+          <StagePhotosSection
+            projectId={project.id}
+            projectName={project.name}
+            stagePhotos={stagePhotos}
+            isCoordinator={isCoordinator}
+            onUploadStagePhoto={onUploadStagePhoto || (async () => {})}
+            onDeleteStagePhoto={onDeleteStagePhoto || (async () => {})}
+          />
         </div>
       )}
 
@@ -523,7 +572,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             {projStages.length === 0 ? (
               <p className="text-xs text-slate-400 text-center py-8">No execution stages configured for this campus.</p>
             ) : (
-              projStages.map((stage) => {
+              [...projStages].sort((a, b) => (Number(a.stageNumber) || 0) - (Number(b.stageNumber) || 0)).map((stage) => {
                 const isExpanded = expandedStageId === stage.id;
                 const subTasks = stage.subTasks || [];
                 return (
@@ -541,7 +590,10 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                         </div>
                         <div>
                           <h4 className="text-xs font-bold text-slate-900">{stage.stageName}</h4>
-                          <span className="text-[10px] text-slate-500">
+                          {stage.description && (
+                            <p className="text-[11px] text-slate-600 line-clamp-1 mt-0.5">{stage.description}</p>
+                          )}
+                          <span className="text-[10px] text-slate-500 block mt-0.5">
                             {stage.phase} • {subTasks.filter(t => t.completed).length}/{subTasks.length} Sub-tasks verified • Click to {isExpanded ? 'collapse' : 'expand'}
                           </span>
                         </div>
@@ -765,68 +817,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
         </div>
       )}
 
-      {/* SUB-TAB 6: DOCUMENTS */}
-      {activeSubTab === 'documents' && (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Project Documents, Drawings & BOQ</h3>
-              <p className="text-xs text-slate-500">Cloud stored architectural plans, compliance links, and vendor files</p>
-            </div>
-            {isCoordinator && (
-              <button
-                onClick={onOpenAddDoc}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all"
-              >
-                <Upload className="w-4 h-4" />
-                <span>Upload Document</span>
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-3">
-            {projDocs.length === 0 ? (
-              <p className="text-xs text-slate-400 text-center py-8">No documents uploaded yet for this campus.</p>
-            ) : (
-              projDocs.map((doc) => (
-                <div key={doc.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600">{doc.category}</span>
-                    <h4 className="text-xs font-bold text-slate-900 mt-1">{doc.title}</h4>
-                    <span className="text-[10px] text-slate-400">Uploaded: {formatDate(doc.uploadDate)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={doc.documentUrl || doc.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-500 transition-all"
-                    >
-                      <span>Open Document</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                    {isCoordinator && (
-                      <button
-                        onClick={() => {
-                          if (confirm(`Delete document "${doc.title}" from storage & database?`)) {
-                            onDeleteDocument?.(doc.id);
-                          }
-                        }}
-                        className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                        title="Delete document"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* SUB-TAB 7: DAY-WISE PHOTOS & REPORTS */}
+      {/* SUB-TAB 6: DAY-WISE PHOTOS & REPORTS */}
       {activeSubTab === 'photos' && (
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">

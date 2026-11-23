@@ -1,6 +1,7 @@
 import { 
   Project, DayWiseReport, DayWisePhoto, ExecutionStageItem, 
-  MaterialItem, ManpowerItem, ApprovalItem, DocumentItem, User, AllDataResponse, AppSettings, DatabaseMeta 
+  MaterialItem, ManpowerItem, ApprovalItem, DocumentItem, User, AllDataResponse, AppSettings, DatabaseMeta,
+  StagePhoto, StageType
 } from '../types';
 import { formatDate } from '../utils/date';
 import { INITIAL_USERS } from '../data/seedData';
@@ -18,6 +19,7 @@ const STORAGE_KEYS = {
   MANPOWER: 'unitracker_manpower',
   APPROVALS: 'unitracker_approvals',
   DOCUMENTS: 'unitracker_documents',
+  STAGE_PHOTOS: 'unitracker_stage_photos',
   CURRENT_USER: 'unitracker_current_user',
   LAST_SYNC_TIME: 'unitracker_last_sync_time',
   APP_NAME: 'unitracker_app_name',
@@ -31,6 +33,16 @@ export interface UploadPhotoPayload {
   dayNumber: number;
   date: string;
   caption: string;
+  fileName: string;
+  mimeType: string;
+  base64Data: string;
+}
+
+export interface UploadStagePhotoPayload {
+  projectId: string;
+  stageType: StageType;
+  caption?: string;
+  date?: string;
   fileName: string;
   mimeType: string;
   base64Data: string;
@@ -337,6 +349,12 @@ export const api = {
           documentUrl: doc.documentUrl || doc.url || '',
           url: doc.documentUrl || doc.url || ''
         })),
+        StagePhotos: (d.StagePhotos && Array.isArray(d.StagePhotos) && d.StagePhotos.length > 0)
+          ? d.StagePhotos.map((sp: any) => ({
+              ...sp,
+              date: formatDate(sp.date, 'input') || sp.date
+            }))
+          : this.getLocalStagePhotos(),
         DatabaseMeta: d.DatabaseMeta || {
           name: d.DatabaseMeta?.name || 'Main Execution Database',
           sheetUrl: d.DatabaseMeta?.sheetUrl || ''
@@ -598,6 +616,88 @@ export const api = {
   },
 
   /**
+   * 8. StagePhotos Local Cache & Remote Upload Handlers
+   */
+  getLocalStagePhotos(): StagePhoto[] {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.STAGE_PHOTOS);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return [];
+  },
+
+  setLocalStagePhotos(photos: StagePhoto[]) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.STAGE_PHOTOS, JSON.stringify(photos));
+    } catch (e) {}
+  },
+
+  async uploadStagePhoto(payload: UploadStagePhotoPayload): Promise<{ status: string; data?: StagePhoto; message?: string }> {
+    // 1. Upload photo to Google Drive
+    const uploadRes = await this.postToScript<{ status: string; data?: any; message?: string }>({
+      action: 'uploadPhoto',
+      ...payload
+    });
+
+    if (uploadRes.status === 'success' && uploadRes.data) {
+      const photoId = uploadRes.data.id || `stagephoto-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+      const driveFileId = uploadRes.data.driveFileId || '';
+      const imageUrl = uploadRes.data.imageUrl || '';
+      const formattedDate = formatDate(payload.date, 'input') || formatDate(new Date(), 'input');
+
+      const photoRecord: StagePhoto = {
+        id: photoId,
+        projectId: payload.projectId,
+        stageType: payload.stageType,
+        caption: payload.caption || '',
+        date: formattedDate,
+        driveFileId,
+        imageUrl,
+        createdAt: new Date().toISOString()
+      };
+
+      // 2. Persist to StagePhotos sheet
+      try {
+        await this.createRecord('StagePhotos', photoRecord);
+      } catch (err) {
+        console.warn('Could not append to StagePhotos sheet, persisted locally:', err);
+      }
+
+      // 3. Update local cache
+      const local = this.getLocalStagePhotos();
+      const updated = [photoRecord, ...local.filter(p => p.id !== photoRecord.id)];
+      this.setLocalStagePhotos(updated);
+
+      const cache = this.getLiveCache();
+      if (cache) {
+        cache.StagePhotos = [photoRecord, ...(cache.StagePhotos || []).filter(p => p.id !== photoRecord.id)];
+        this.setLiveCache(cache);
+      }
+
+      return { status: 'success', data: photoRecord };
+    } else {
+      throw new Error(uploadRes.message || 'Stage photo upload failed on Database Apps Script');
+    }
+  },
+
+  async deleteStagePhoto(id: string): Promise<{ status: string; message?: string }> {
+    try {
+      await this.deleteRecord('StagePhotos', id);
+    } catch (err) {
+      console.warn('Remote StagePhotos delete failed:', err);
+    }
+    const local = this.getLocalStagePhotos().filter(p => p.id !== id);
+    this.setLocalStagePhotos(local);
+
+    const cache = this.getLiveCache();
+    if (cache && cache.StagePhotos) {
+      cache.StagePhotos = cache.StagePhotos.filter(p => p.id !== id);
+      this.setLiveCache(cache);
+    }
+    return { status: 'success' };
+  },
+
+  /**
    * Cache full data in localStorage
    */
   cacheLocalData(data: AllDataResponse) {
@@ -610,6 +710,9 @@ export const api = {
       localStorage.setItem(STORAGE_KEYS.MANPOWER, JSON.stringify(data.Manpower));
       localStorage.setItem(STORAGE_KEYS.APPROVALS, JSON.stringify(data.Approvals));
       localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(data.Documents));
+      if (data.StagePhotos) {
+        localStorage.setItem(STORAGE_KEYS.STAGE_PHOTOS, JSON.stringify(data.StagePhotos));
+      }
       if (data.DatabaseMeta) {
         localStorage.setItem(STORAGE_KEYS.DATABASE_META, JSON.stringify(data.DatabaseMeta));
       }
@@ -639,6 +742,7 @@ export const api = {
       Manpower: getCached(STORAGE_KEYS.MANPOWER, []),
       Approvals: getCached(STORAGE_KEYS.APPROVALS, []),
       Documents: getCached(STORAGE_KEYS.DOCUMENTS, []),
+      StagePhotos: getCached(STORAGE_KEYS.STAGE_PHOTOS, []),
       DatabaseMeta: getCached(STORAGE_KEYS.DATABASE_META, { name: 'Main Execution Database' })
     };
   },
