@@ -200,7 +200,7 @@ export interface User {
 
 export interface AppSettings {
   appName?: string;
-  whatsappNumber?: string;
+  whatsappNumber?: string | number;
   heroVideoUrl?: string;
 }
 

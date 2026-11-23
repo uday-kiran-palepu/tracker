@@ -37,7 +37,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Fallback to local portrait video if not provided in AppSettings
-  const videoSrc = appSettings?.heroVideoUrl || '/hero-video.mp4';
+  const videoSrc = (appSettings?.heroVideoUrl ? String(appSettings.heroVideoUrl).trim() : '') || '/hero-video.mp4';
+  const cleanWhatsApp = appSettings?.whatsappNumber ? String(appSettings.whatsappNumber).replace(/[^0-9]/g, '') : '';
 
   // 1-second (1000ms) interval dynamic background slideshow
   useEffect(() => {
@@ -171,9 +172,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </button>
 
           {/* WhatsApp Contact Action */}
-          {appSettings?.whatsappNumber && (
+          {cleanWhatsApp && (
             <a
-              href={`https://wa.me/${appSettings.whatsappNumber.replace(/[^0-9]/g, '')}`}
+              href={`https://wa.me/${cleanWhatsApp}`}
               target="_blank"
               rel="noopener noreferrer"
               className="px-5 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs sm:text-sm shadow-xl shadow-emerald-600/30 transition-all flex items-center gap-2 cursor-pointer"

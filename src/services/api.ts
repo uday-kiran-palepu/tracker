@@ -81,10 +81,25 @@ export const api = {
   getAppSettings(): AppSettings {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.APP_SETTINGS);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed) {
+          return {
+            appName: parsed.appName != null ? String(parsed.appName) : 'Project Portal',
+            whatsappNumber: parsed.whatsappNumber != null ? String(parsed.whatsappNumber) : '',
+            heroVideoUrl: parsed.heroVideoUrl != null ? String(parsed.heroVideoUrl) : ''
+          };
+        }
+      }
     } catch (e) {}
     const live = this.getLiveCache();
-    if (live?.AppSettings) return live.AppSettings;
+    if (live?.AppSettings) {
+      return {
+        appName: live.AppSettings.appName != null ? String(live.AppSettings.appName) : 'Project Portal',
+        whatsappNumber: live.AppSettings.whatsappNumber != null ? String(live.AppSettings.whatsappNumber) : '',
+        heroVideoUrl: live.AppSettings.heroVideoUrl != null ? String(live.AppSettings.heroVideoUrl) : ''
+      };
+    }
     return {
       appName: localStorage.getItem(STORAGE_KEYS.APP_NAME) || 'Project Portal',
       whatsappNumber: '',
@@ -94,9 +109,14 @@ export const api = {
 
   setAppSettings(settings: AppSettings) {
     try {
-      localStorage.setItem(STORAGE_KEYS.APP_SETTINGS, JSON.stringify(settings));
-      if (settings.appName) {
-        this.setAppName(settings.appName);
+      const normalized: AppSettings = {
+        appName: settings?.appName != null ? String(settings.appName) : 'Project Portal',
+        whatsappNumber: settings?.whatsappNumber != null ? String(settings.whatsappNumber) : '',
+        heroVideoUrl: settings?.heroVideoUrl != null ? String(settings.heroVideoUrl) : ''
+      };
+      localStorage.setItem(STORAGE_KEYS.APP_SETTINGS, JSON.stringify(normalized));
+      if (normalized.appName) {
+        this.setAppName(normalized.appName);
       }
     } catch (e) {}
   },
@@ -321,15 +341,15 @@ export const api = {
           name: d.DatabaseMeta?.name || 'Main Execution Database',
           sheetUrl: d.DatabaseMeta?.sheetUrl || ''
         },
-        AppSettings: d.AppSettings || {
-          appName: this.getAppName(),
-          whatsappNumber: '',
-          heroVideoUrl: ''
+        AppSettings: {
+          appName: d.AppSettings?.appName != null ? String(d.AppSettings.appName) : this.getAppName(),
+          whatsappNumber: d.AppSettings?.whatsappNumber != null ? String(d.AppSettings.whatsappNumber) : '',
+          heroVideoUrl: d.AppSettings?.heroVideoUrl != null ? String(d.AppSettings.heroVideoUrl) : ''
         }
       };
 
       if (d.AppSettings) {
-        this.setAppSettings(d.AppSettings);
+        this.setAppSettings(normalizedData.AppSettings);
       }
 
       // Cache in SWR storage and local state

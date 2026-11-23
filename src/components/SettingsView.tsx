@@ -50,15 +50,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [switchFeedback, setSwitchFeedback] = useState<{ status: 'success' | 'error'; message: string } | null>(null);
 
   // App Settings state (App Name, WhatsApp, Hero Video)
-  const [appNameInput, setAppNameInput] = useState(appName || appSettings?.appName || '');
-  const [whatsappInput, setWhatsappInput] = useState(appSettings?.whatsappNumber || '');
-  const [heroVideoUrlInput, setHeroVideoUrlInput] = useState(appSettings?.heroVideoUrl || '');
+  const [appNameInput, setAppNameInput] = useState(appName || (appSettings?.appName ? String(appSettings.appName) : ''));
+  const [whatsappInput, setWhatsappInput] = useState(appSettings?.whatsappNumber ? String(appSettings.whatsappNumber) : '');
+  const [heroVideoUrlInput, setHeroVideoUrlInput] = useState(appSettings?.heroVideoUrl ? String(appSettings.heroVideoUrl) : '');
   const [appNameFeedback, setAppNameFeedback] = useState<string | null>(null);
 
   useEffect(() => {
-    if (appName) setAppNameInput(appName);
-    if (appSettings?.whatsappNumber !== undefined) setWhatsappInput(appSettings.whatsappNumber);
-    if (appSettings?.heroVideoUrl !== undefined) setHeroVideoUrlInput(appSettings.heroVideoUrl);
+    if (appName) setAppNameInput(String(appName));
+    if (appSettings?.whatsappNumber !== undefined && appSettings?.whatsappNumber !== null) {
+      setWhatsappInput(String(appSettings.whatsappNumber));
+    }
+    if (appSettings?.heroVideoUrl !== undefined && appSettings?.heroVideoUrl !== null) {
+      setHeroVideoUrlInput(String(appSettings.heroVideoUrl));
+    }
   }, [appName, appSettings]);
 
   // Profile fields state
