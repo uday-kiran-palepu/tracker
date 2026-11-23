@@ -8,7 +8,7 @@ import {
   DayWiseReport, DayWisePhoto, ProjectStatus, ProjectHealth, ManpowerItem, ExecutionStageItem 
 } from '../types';
 import { APPS_SCRIPT_CODE } from '../data/appsScriptCode';
-import { compressImage } from '../utils/imageCompressor';
+import { compressImageToBase64 } from '../utils/image';
 import { formatDateInput } from '../utils/date';
 import { api } from '../services/api';
 
@@ -67,8 +67,8 @@ export const CoordinatorLoginModal: React.FC<{
   onClose: () => void;
   onLogin: (user: User) => void;
 }> = ({ isOpen, onClose, onLogin }) => {
-  const [username, setUsername] = useState('coordinator');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -98,7 +98,6 @@ export const CoordinatorLoginModal: React.FC<{
         <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 text-xs text-blue-900">
           <span className="font-bold block mb-1">Coordinator Access Required</span>
           Log in with your coordinator credentials to unlock full CRUD permissions, cloud document uploads, and day-wise photos across all campuses.
-          <p className="mt-1 text-[11px] text-blue-700">Demo fallback: <code className="font-mono bg-blue-100 px-1 rounded">coordinator</code> / <code className="font-mono bg-blue-100 px-1 rounded">admin123</code></p>
         </div>
 
         {errorMsg && (
@@ -115,6 +114,7 @@ export const CoordinatorLoginModal: React.FC<{
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
+            placeholder="Enter username"
             className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
           />
         </div>
@@ -126,6 +126,7 @@ export const CoordinatorLoginModal: React.FC<{
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            placeholder="Enter password"
             className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
           />
         </div>
@@ -762,7 +763,7 @@ export const AddDayWiseReportAndPhotosModal: React.FC<{
           message: `Compressing & uploading photo ${i + 1} of ${totalPhotos}...`
         });
 
-        const compressed = await compressImage(item.file, 1200, 0.75);
+        const compressed = await compressImageToBase64(item.file);
 
         const photoRes = await api.uploadDayWisePhoto({
           projectId: project.id,
@@ -770,7 +771,7 @@ export const AddDayWiseReportAndPhotosModal: React.FC<{
           dayNumber: Number(dayNumber),
           date: formatDateInput(date),
           caption: item.caption.trim() || `Day ${dayNumber} Photo`,
-          fileName: item.file.name,
+          fileName: compressed.fileName,
           mimeType: compressed.mimeType,
           base64Data: compressed.base64Data
         });

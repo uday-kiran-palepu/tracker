@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { StagePhoto, StageType } from '../types';
 import { formatDate } from '../utils/date';
-import { compressImage } from '../utils/imageCompressor';
+import { compressImageToBase64, getReliableImageUrl, handleImageFallback } from '../utils/image';
 
 interface StagePhotosSectionProps {
   projectId: string;
@@ -87,11 +87,15 @@ export const StagePhotosSection: React.FC<StagePhotosSectionProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [lightboxPhoto, activeModalStage]);
 
-  // Filter photos for project
-  const projectPhotos = stagePhotos.filter(p => p.projectId === projectId);
+  // Filter photos for project with normalized ID comparison
+  const projectPhotos = stagePhotos.filter(p => String(p.projectId || '').trim() === String(projectId || '').trim());
 
   const getPhotosForStage = (type: StageType): StagePhoto[] => {
-    return projectPhotos.filter(p => p.stageType === type);
+    const normType = String(type).trim().toLowerCase();
+    return projectPhotos.filter(p => {
+      const pType = String(p.stageType || (p as any).stageCategory || '').trim().toLowerCase();
+      return pType === normType;
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,8 +114,8 @@ export const StagePhotosSection: React.FC<StagePhotosSectionProps> = ({
 
     try {
       for (const file of selectedFiles) {
-        // High quality client-side canvas compression (1600px, 0.8 quality)
-        const compressed = await compressImage(file, 1600, 1600, 0.8);
+        // Shared 1200px max-width, 0.78 quality, raw Base64 compression
+        const compressed = await compressImageToBase64(file);
         await onUploadStagePhoto({
           projectId,
           stageType: activeModalStage,
@@ -182,10 +186,12 @@ export const StagePhotosSection: React.FC<StagePhotosSectionProps> = ({
                   {latestPhoto ? (
                     <>
                       <img
-                        src={latestPhoto.imageUrl}
+                        src={getReliableImageUrl(latestPhoto)}
                         alt={latestPhoto.caption || stage.title}
                         className="w-full h-full object-cover"
                         loading="lazy"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => handleImageFallback(e, latestPhoto)}
                       />
                       <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
                       <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] text-white bg-black/60 backdrop-blur-md px-2 py-1 rounded-md">
@@ -352,10 +358,12 @@ export const StagePhotosSection: React.FC<StagePhotosSectionProps> = ({
                         onClick={() => setLightboxPhoto(photo)}
                       >
                         <img
-                          src={photo.imageUrl}
+                          src={getReliableImageUrl(photo)}
                           alt={photo.caption || activeModalStage}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           loading="lazy"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => handleImageFallback(e, photo)}
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                           <span className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full bg-white/80 text-slate-900">
@@ -439,9 +447,11 @@ export const StagePhotosSection: React.FC<StagePhotosSectionProps> = ({
 
           <div className="max-w-5xl max-h-[80vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
             <img
-              src={lightboxPhoto.imageUrl}
+              src={getReliableImageUrl(lightboxPhoto)}
               alt={lightboxPhoto.caption || 'Stage photo preview'}
               className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl"
+              referrerPolicy="no-referrer"
+              onError={(e) => handleImageFallback(e, lightboxPhoto)}
             />
             <div className="mt-4 text-center text-white">
               <p className="text-sm font-bold">{lightboxPhoto.caption || `${lightboxPhoto.stageType} photo`}</p>

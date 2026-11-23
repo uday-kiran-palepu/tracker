@@ -45,14 +45,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           className="absolute inset-0 w-full h-full object-cover scale-105"
         />
 
-        {/* Cinematic Multi-layered Dark Gradient & Vignette Overlay */}
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/60" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-slate-950/40 to-slate-950/90" />
+        {/* Ultra-light 5% dark overlay (95% clear transparency) so the video is bright & clearly visible */}
+        <div className="absolute inset-0 bg-black/5 pointer-events-none" />
       </div>
 
       {/* Top Navbar */}
-      <header className="relative z-20 w-full px-4 sm:px-8 py-4 sm:py-6 flex items-center justify-between border-b border-white/10 backdrop-blur-md bg-slate-950/40">
+      <header className="relative z-20 w-full px-4 sm:px-8 py-4 sm:py-6 flex items-center justify-between border-b border-white/10 backdrop-blur-md bg-black/20">
         {/* Left Logo: KHK / Pen Group */}
         <div className="flex items-center gap-3">
           <img
@@ -92,29 +90,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* Center Hero Content */}
       <main className="relative z-20 flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 py-12 sm:py-16 max-w-4xl mx-auto">
         {/* Top Tagline Pill */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30 backdrop-blur-md mb-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-          <Sparkles className="w-4 h-4 text-blue-400" />
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-blue-500/30 text-blue-200 border border-blue-400/40 backdrop-blur-md mb-6 drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <Sparkles className="w-4 h-4 text-blue-300" />
           <span>Real-Time Campus Lab Infrastructure & Execution Portal</span>
         </div>
 
         {/* Dynamic App Title */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white drop-shadow-2xl leading-[1.1] mb-4">
+        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] leading-[1.1] mb-4">
           {appName || 'Project Portal'}
         </h1>
 
-        <p className="text-lg sm:text-xl font-medium text-blue-200 max-w-2xl drop-shadow leading-relaxed mb-4">
+        <p className="text-lg sm:text-xl font-medium text-white max-w-2xl drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] leading-relaxed mb-4">
           Empowering Next-Gen University Labs & Campuses Across India
         </p>
 
-        <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed mb-8">
+        <p className="text-xs sm:text-sm text-slate-100 max-w-2xl drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] leading-relaxed mb-8 font-medium">
           Unified multi-campus execution monitoring, live contractor coordination, real-time 21-stage milestone progression, day-wise photo logs, and asset deployment analytics.
         </p>
 
         {/* Primary CTA Buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]">
           <button
             onClick={onEnterDashboard}
-            className="group px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm sm:text-base shadow-2xl shadow-blue-600/50 hover:shadow-blue-500/70 transition-all duration-300 flex items-center gap-2.5 transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+            className="group px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm sm:text-base shadow-2xl shadow-blue-600/50 hover:shadow-blue-500/70 transition-all duration-300 flex items-center gap-2.5 transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]"
           >
             <span>View More</span>
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
@@ -122,7 +120,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <button
             onClick={onOpenMap}
-            className="px-6 py-4 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs sm:text-sm backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 cursor-pointer hover:border-white/40"
+            className="px-6 py-4 rounded-2xl bg-black/40 hover:bg-black/60 text-white font-semibold text-xs sm:text-sm backdrop-blur-md border border-white/30 transition-all flex items-center gap-2 cursor-pointer hover:border-white/60 drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]"
           >
             <MapPin className="w-4 h-4 text-blue-400" />
             <span>Explore India Campus Map</span>
@@ -134,7 +132,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               href={`https://wa.me/${cleanWhatsApp}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-6 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs sm:text-sm shadow-xl shadow-emerald-600/30 transition-all flex items-center gap-2 cursor-pointer"
+              className="px-6 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs sm:text-sm shadow-xl shadow-emerald-600/30 transition-all flex items-center gap-2 cursor-pointer drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]"
             >
               <MessageCircle className="w-4 h-4" />
               <span>WhatsApp Team</span>

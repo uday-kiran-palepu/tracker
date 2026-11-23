@@ -4,6 +4,7 @@ import {
   ArrowUpRight, ShieldAlert, Sparkles, Building2, MapPin
 } from 'lucide-react';
 import { Project, SiteUpdateItem } from '../types';
+import { getReliableImageUrl, handleImageFallback } from '../utils/image';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface DashboardViewProps {
@@ -413,11 +414,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div>
                   <div className="h-36 overflow-hidden relative">
                     <img
-                      src={update.imageUrl}
+                      src={getReliableImageUrl(update.imageUrl)}
                       alt={update.projectName}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
                       decoding="async"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => handleImageFallback(e, update.imageUrl)}
                     />
                     <div className="absolute top-2 right-2">
                       <span className={`whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-bold px-2.5 py-1 rounded-full text-white ${update.healthBadge === 'On Track' ? 'bg-emerald-600' :

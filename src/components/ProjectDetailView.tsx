@@ -11,6 +11,7 @@ import {
   PhotoItem, SiteUpdateItem, DayWiseReport, DayWisePhoto, StagePhoto, StageType 
 } from '../types';
 import { formatDate } from '../utils/date';
+import { getReliableImageUrl, handleImageFallback } from '../utils/image';
 import { StagePhotosSection } from './StagePhotosSection';
 
 interface ProjectDetailViewProps {
@@ -94,15 +95,15 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   const [expandedStageId, setExpandedStageId] = useState<string | null>(null);
 
   const isCoordinator = currentUser.role === 'Project Coordinator';
-  const projStages = executionStages.filter(s => s.projectId === project.id);
-  const projMaterials = materials.filter(m => m.projectId === project.id);
-  const projManpower = manpower.filter(mp => mp.projectId === project.id);
-  const projDocs = documents.filter(d => d.projectId === project.id);
-  const projUpdates = siteUpdates.filter(su => su.projectId === project.id);
+  const projStages = executionStages.filter(s => String(s.projectId || '').trim() === String(project.id || '').trim());
+  const projMaterials = materials.filter(m => String(m.projectId || '').trim() === String(project.id || '').trim());
+  const projManpower = manpower.filter(mp => String(mp.projectId || '').trim() === String(project.id || '').trim());
+  const projDocs = documents.filter(d => String(d.projectId || '').trim() === String(project.id || '').trim());
+  const projUpdates = siteUpdates.filter(su => String(su.projectId || '').trim() === String(project.id || '').trim());
 
-  // Filter Day-Wise Reports & Photos for this project
-  const projReports = dayWiseReports.filter(r => r.projectId === project.id);
-  const projDayPhotos = dayWisePhotos.filter(p => p.projectId === project.id);
+  // Filter Day-Wise Reports & Photos for this project with normalized IDs
+  const projReports = dayWiseReports.filter(r => String(r.projectId || '').trim() === String(project.id || '').trim());
+  const projDayPhotos = dayWisePhotos.filter(p => String(p.projectId || '').trim() === String(project.id || '').trim());
 
   // Group days: get all unique day numbers from reports and photos
   const allDaysSet = new Set<number>();
@@ -267,7 +268,15 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
               <div className="h-64 sm:h-80 relative">
-                <img src={heroImg} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                <img 
+                  src={getReliableImageUrl(heroImg)} 
+                  alt="" 
+                  className="w-full h-full object-cover" 
+                  loading="lazy" 
+                  decoding="async"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => handleImageFallback(e, heroImg)}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4 text-white">
                   <p className="text-xs font-medium text-blue-300">NxtWave Campus Infrastructure</p>
@@ -975,11 +984,13 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                         className="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer h-56"
                       >
                         <img 
-                          src={photo.imageUrl} 
+                          src={getReliableImageUrl(photo)} 
                           alt={photo.caption || `Day ${activeDay} site photo`} 
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                           loading="lazy"
                           decoding="async"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => handleImageFallback(e, photo)}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-90 group-hover:opacity-100 transition-opacity" />
 
@@ -1048,11 +1059,13 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
 
           <div className="max-w-4xl max-h-[85vh] flex flex-col items-center" onClick={e => e.stopPropagation()}>
             <img 
-              src={lightboxPhoto.list[lightboxPhoto.index].imageUrl} 
+              src={getReliableImageUrl(lightboxPhoto.list[lightboxPhoto.index])} 
               alt="" 
               className="max-h-[75vh] w-auto object-contain rounded-2xl shadow-2xl" 
               loading="lazy"
               decoding="async"
+              referrerPolicy="no-referrer"
+              onError={(e) => handleImageFallback(e, lightboxPhoto.list[lightboxPhoto.index])}
             />
             <div className="mt-4 text-center text-white">
               <h5 className="text-sm font-bold">{lightboxPhoto.list[lightboxPhoto.index].caption || `Day ${lightboxPhoto.list[lightboxPhoto.index].dayNumber} photo`}</h5>

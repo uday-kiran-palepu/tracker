@@ -315,10 +315,13 @@ export const api = {
           date: formatDate(r.date, 'input') || r.date,
           workersCount: Number(r.workersCount) || 0
         })),
-        DayWisePhotos: (d.DayWisePhotos || []).map((ph: any) => ({
+        DayWisePhotos: (d.DayWisePhotos || d.dayWisePhotos || []).map((ph: any) => ({
           ...ph,
+          projectId: String(ph.projectId || '').trim(),
           dayNumber: Number(ph.dayNumber) || 1,
-          date: formatDate(ph.date, 'input') || ph.date
+          date: formatDate(ph.date, 'input') || ph.date,
+          driveFileId: ph.driveFileId || '',
+          imageUrl: ph.imageUrl || ''
         })),
         ExecutionStages: parsedStages,
         Materials: (d.Materials || []).map((m: any) => ({
@@ -349,12 +352,19 @@ export const api = {
           documentUrl: doc.documentUrl || doc.url || '',
           url: doc.documentUrl || doc.url || ''
         })),
-        StagePhotos: (d.StagePhotos && Array.isArray(d.StagePhotos) && d.StagePhotos.length > 0)
-          ? d.StagePhotos.map((sp: any) => ({
-              ...sp,
-              date: formatDate(sp.date, 'input') || sp.date
-            }))
-          : this.getLocalStagePhotos(),
+        StagePhotos: (() => {
+          const rawList = (d.StagePhotos || d.stagePhotos || []);
+          const list = (Array.isArray(rawList) && rawList.length > 0) ? rawList : this.getLocalStagePhotos();
+          return list.map((sp: any) => ({
+            ...sp,
+            projectId: String(sp.projectId || '').trim(),
+            stageType: sp.stageType || sp.stageCategory || 'Current Stage',
+            caption: sp.caption || '',
+            date: formatDate(sp.date, 'input') || sp.date,
+            driveFileId: sp.driveFileId || '',
+            imageUrl: sp.imageUrl || ''
+          }));
+        })(),
         DatabaseMeta: d.DatabaseMeta || {
           name: d.DatabaseMeta?.name || 'Main Execution Database',
           sheetUrl: d.DatabaseMeta?.sheetUrl || ''
@@ -474,7 +484,7 @@ export const api = {
       return { status: 'success', user: fallbackUser };
     }
 
-    return { status: 'error', message: 'Invalid credentials. Use coordinator / admin123' };
+    return { status: 'error', message: 'Invalid credentials. Please verify your username and password.' };
   },
 
   /**

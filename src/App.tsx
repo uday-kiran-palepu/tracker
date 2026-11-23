@@ -295,6 +295,7 @@ export default function App() {
       if (res.data) {
         setStagePhotos(prev => [res.data!, ...prev.filter(p => p.id !== res.data!.id)]);
         showToast('success', `${payload.stageType} photo uploaded successfully!`, 'Uploaded');
+        syncData({ isSilent: true, fresh: true });
       }
     } catch (err: any) {
       showToast('error', `Failed to upload photo: ${err.message}`, 'Upload Failed');
@@ -587,9 +588,9 @@ export default function App() {
 
   // CRUD: Day-Wise Reports & Photos
   const handleAddDayWiseSuccess = (newReport: DayWiseReport, newPhotos: DayWisePhoto[]) => {
-    setDayWiseReports([newReport, ...dayWiseReports]);
+    setDayWiseReports(prev => [newReport, ...prev]);
     if (newPhotos.length > 0) {
-      setDayWisePhotos([...newPhotos, ...dayWisePhotos]);
+      setDayWisePhotos(prev => [...newPhotos, ...prev.filter(p => !newPhotos.some(np => np.id === p.id))]);
     }
     showToast('success', `Day ${newReport.dayNumber} report and ${newPhotos.length} photos uploaded to Cloud Storage & Database!`, 'Upload Complete');
     syncData({ isSilent: true, fresh: true });

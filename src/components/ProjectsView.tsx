@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Project, User } from '../types';
 import { formatDate } from '../utils/date';
+import { getReliableImageUrl, handleImageFallback } from '../utils/image';
 
 interface ProjectsViewProps {
   projects: Project[];
@@ -142,11 +143,13 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 {/* Hero Image Header */}
                 <div className="h-48 relative overflow-hidden bg-slate-100">
                   <img
-                    src={proj.heroImageUrl || proj.heroImage}
+                    src={getReliableImageUrl(proj.heroImageUrl || proj.heroImage)}
                     alt={proj.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
                     decoding="async"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => handleImageFallback(e, proj.heroImageUrl || proj.heroImage)}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-transparent to-transparent" />
                   
@@ -276,7 +279,15 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 {filteredProjects.map((proj) => (
                   <tr key={proj.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-4 flex items-center gap-3">
-                      <img src={proj.heroImageUrl || proj.heroImage} alt="" className="w-10 h-10 rounded-lg object-cover" loading="lazy" decoding="async" />
+                      <img 
+                        src={getReliableImageUrl(proj.heroImageUrl || proj.heroImage)} 
+                        alt="" 
+                        className="w-10 h-10 rounded-lg object-cover" 
+                        loading="lazy" 
+                        decoding="async" 
+                        referrerPolicy="no-referrer"
+                        onError={(e) => handleImageFallback(e, proj.heroImageUrl || proj.heroImage)}
+                      />
                       <div>
                         <p 
                           onClick={() => onSelectProject(proj)}
