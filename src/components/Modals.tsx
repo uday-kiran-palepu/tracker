@@ -291,12 +291,6 @@ export const AddProjectModal: React.FC<{
   const [mapsUrl, setMapsUrl] = useState('');
   const [pocName, setPocName] = useState('Charan Sai');
   const [pocPhone, setPocPhone] = useState('+91 98765 43210');
-  const [budgetAllocated, setBudgetAllocated] = useState(25000000);
-  const [budgetSpent, setBudgetSpent] = useState(5000000);
-  const [civilProgress, setCivilProgress] = useState(30);
-  const [mepProgress, setMepProgress] = useState(20);
-  const [furnitureProgress, setFurnitureProgress] = useState(10);
-  const [brandingProgress, setBrandingProgress] = useState(15);
 
   // Priority-based location synchronization
   const handleCityChange = (newCity: string) => {
@@ -370,22 +364,14 @@ export const AddProjectModal: React.FC<{
       mapsUrl: resolvedCoords.mapsUrl,
       pocName,
       pocPhone,
-      budgetAllocated: Number(budgetAllocated),
-      budgetSpent: Number(budgetSpent),
-      civilProgress: Number(civilProgress),
-      mepProgress: Number(mepProgress),
-      furnitureProgress: Number(furnitureProgress),
-      brandingProgress: Number(brandingProgress),
+      budgetAllocated: 0,
+      budgetSpent: 0,
+      civilProgress: 0,
+      mepProgress: 0,
+      furnitureProgress: 0,
+      brandingProgress: 0,
       description: `Modern learning campus in ${city}, ${state}. Built-up area: ${Number(areaSft).toLocaleString()} sft.`,
       coordinatorName: 'Charan Sai',
-      budget: `₹${(Number(budgetAllocated) / 10000000).toFixed(2)} Cr`,
-      spent: `₹${(Number(budgetSpent) / 10000000).toFixed(2)} Cr`,
-      workPackages: {
-        civilInterior: Number(civilProgress),
-        mep: Number(mepProgress),
-        furnitureAv: Number(furnitureProgress),
-        brandingSignage: Number(brandingProgress)
-      }
     };
     onAdd(newProj);
     onClose();
@@ -456,18 +442,6 @@ export const AddProjectModal: React.FC<{
           </div>
         </div>
 
-        {/* Budget Fields */}
-        <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Budget Allocated (₹)</label>
-            <input type="number" min={0} value={budgetAllocated} onChange={e => setBudgetAllocated(Number(e.target.value))} required className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 font-semibold" />
-          </div>
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Budget Spent (₹)</label>
-            <input type="number" min={0} value={budgetSpent} onChange={e => setBudgetSpent(Number(e.target.value))} required className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 font-semibold" />
-          </div>
-        </div>
-
         {/* NxtWave Executive POC Details */}
         <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-blue-50/50 border border-blue-100">
           <div>
@@ -493,26 +467,6 @@ export const AddProjectModal: React.FC<{
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Google Maps URL</label>
             <input type="url" value={mapsUrl} onChange={e => handleMapsUrlChange(e.target.value)} placeholder="https://maps.google.com/?q=..." className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200" />
-          </div>
-        </div>
-
-        {/* Work Package Progress */}
-        <div className="grid grid-cols-4 gap-2">
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Civil (%)</label>
-            <input type="number" min={0} max={100} value={civilProgress} onChange={e => setCivilProgress(Number(e.target.value))} className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200" />
-          </div>
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">MEP (%)</label>
-            <input type="number" min={0} max={100} value={mepProgress} onChange={e => setMepProgress(Number(e.target.value))} className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200" />
-          </div>
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Furn. (%)</label>
-            <input type="number" min={0} max={100} value={furnitureProgress} onChange={e => setFurnitureProgress(Number(e.target.value))} className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200" />
-          </div>
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Brand (%)</label>
-            <input type="number" min={0} max={100} value={brandingProgress} onChange={e => setBrandingProgress(Number(e.target.value))} className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200" />
           </div>
         </div>
 
@@ -548,17 +502,11 @@ export const EditProjectModal: React.FC<{
   const [progress, setProgress] = useState(project.progress);
   const [startDate, setStartDate] = useState(formatDateInput(project.startDate));
   const [targetDate, setTargetDate] = useState(formatDateInput(project.targetDate || project.targetHandover));
-  const [budgetAllocated, setBudgetAllocated] = useState(project.budgetAllocated ?? 25000000);
-  const [budgetSpent, setBudgetSpent] = useState(project.budgetSpent ?? 5000000);
   const [lat, setLat] = useState(project.lat);
   const [lng, setLng] = useState(project.lng);
   const [mapsUrl, setMapsUrl] = useState(project.mapsUrl || '');
   const [pocName, setPocName] = useState(project.pocName || '');
   const [pocPhone, setPocPhone] = useState(String(project.pocPhone || ''));
-  const [civilProgress, setCivilProgress] = useState(project.civilProgress ?? 0);
-  const [mepProgress, setMepProgress] = useState(project.mepProgress ?? 0);
-  const [furnitureProgress, setFurnitureProgress] = useState(project.furnitureProgress ?? 0);
-  const [brandingProgress, setBrandingProgress] = useState(project.brandingProgress ?? 0);
   const [heroImageUrl, setHeroImageUrl] = useState(project.heroImageUrl || project.heroImage || '');
 
   // Priority-based location synchronization
@@ -626,8 +574,6 @@ export const EditProjectModal: React.FC<{
       startDate: formatDateInput(startDate),
       targetDate: formatDateInput(targetDate),
       targetHandover: formatDateInput(targetDate),
-      budgetAllocated: Number(budgetAllocated),
-      budgetSpent: Number(budgetSpent),
       lat: resolvedCoords.lat,
       lng: resolvedCoords.lng,
       mapsUrl: resolvedCoords.mapsUrl,
@@ -635,18 +581,12 @@ export const EditProjectModal: React.FC<{
       pocPhone,
       heroImageUrl,
       heroImage: heroImageUrl,
-      civilProgress: Number(civilProgress),
-      mepProgress: Number(mepProgress),
-      furnitureProgress: Number(furnitureProgress),
-      brandingProgress: Number(brandingProgress),
-      budget: `₹${(Number(budgetAllocated) / 10000000).toFixed(2)} Cr`,
-      spent: `₹${(Number(budgetSpent) / 10000000).toFixed(2)} Cr`,
-      workPackages: {
-        civilInterior: Number(civilProgress),
-        mep: Number(mepProgress),
-        furnitureAv: Number(furnitureProgress),
-        brandingSignage: Number(brandingProgress)
-      }
+      budgetAllocated: project.budgetAllocated ?? 0,
+      budgetSpent: project.budgetSpent ?? 0,
+      civilProgress: project.civilProgress ?? 0,
+      mepProgress: project.mepProgress ?? 0,
+      furnitureProgress: project.furnitureProgress ?? 0,
+      brandingProgress: project.brandingProgress ?? 0,
     };
     onUpdate(updated);
     onClose();
@@ -717,18 +657,6 @@ export const EditProjectModal: React.FC<{
           </div>
         </div>
 
-        {/* Budget Fields */}
-        <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Budget Allocated (₹)</label>
-            <input type="number" min={0} value={budgetAllocated} onChange={e => setBudgetAllocated(Number(e.target.value))} required className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 font-semibold" />
-          </div>
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Budget Spent (₹)</label>
-            <input type="number" min={0} value={budgetSpent} onChange={e => setBudgetSpent(Number(e.target.value))} required className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 font-semibold" />
-          </div>
-        </div>
-
         {/* NxtWave Executive POC Details */}
         <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-blue-50/50 border border-blue-100">
           <div>
@@ -754,26 +682,6 @@ export const EditProjectModal: React.FC<{
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Google Maps URL</label>
             <input type="url" value={mapsUrl} onChange={e => handleMapsUrlChange(e.target.value)} placeholder="https://maps.google.com/?q=..." className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200" />
-          </div>
-        </div>
-
-        {/* Work Package Progress */}
-        <div className="grid grid-cols-4 gap-2">
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Civil (%)</label>
-            <input type="number" min={0} max={100} value={civilProgress} onChange={e => setCivilProgress(Number(e.target.value))} className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200" />
-          </div>
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">MEP (%)</label>
-            <input type="number" min={0} max={100} value={mepProgress} onChange={e => setMepProgress(Number(e.target.value))} className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200" />
-          </div>
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Furn. (%)</label>
-            <input type="number" min={0} max={100} value={furnitureProgress} onChange={e => setFurnitureProgress(Number(e.target.value))} className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200" />
-          </div>
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Brand (%)</label>
-            <input type="number" min={0} max={100} value={brandingProgress} onChange={e => setBrandingProgress(Number(e.target.value))} className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200" />
           </div>
         </div>
 
@@ -1280,6 +1188,7 @@ export const AddExecutionStageModal: React.FC<{
   const [stageName, setStageName] = useState('');
   const [status, setStatus] = useState<'Pending' | 'In Progress' | 'Completed'>('Pending');
   const [progress, setProgress] = useState<number>(0);
+  const [remarks, setRemarks] = useState('');
   const [subTaskNames, setSubTaskNames] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1298,6 +1207,7 @@ export const AddExecutionStageModal: React.FC<{
       stageName,
       status,
       progress: Number(progress),
+      remarks: remarks.trim(),
       subTasksJson: JSON.stringify(tasks),
       subTasks: tasks
     };
@@ -1348,6 +1258,20 @@ export const AddExecutionStageModal: React.FC<{
         </div>
 
         <div>
+          <label className="block font-semibold text-slate-700 mb-1">
+            Work Progress Remarks
+            <span className="text-[10px] text-slate-400 font-normal ml-1.5">(Detailed status notes, blockers, or milestone remarks)</span>
+          </label>
+          <textarea
+            rows={4}
+            value={remarks}
+            onChange={e => setRemarks(e.target.value)}
+            placeholder="Enter detailed work progress remarks, observations, inspection notes, or subcontractor updates..."
+            className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 font-normal leading-relaxed resize-y"
+          />
+        </div>
+
+        <div>
           <label className="block font-semibold text-slate-700 mb-1">Sub-tasks (one per line)</label>
           <textarea rows={3} value={subTaskNames} onChange={e => setSubTaskNames(e.target.value)} placeholder="Stud channel fixing&#10;Rockwool acoustic infill&#10;Gypsum board covering" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-mono text-[11px]" />
         </div>
@@ -1374,6 +1298,7 @@ export const EditExecutionStageModal: React.FC<{
   const [stageName, setStageName] = useState(stage.stageName);
   const [status, setStatus] = useState(stage.status);
   const [progress, setProgress] = useState(stage.progress);
+  const [remarks, setRemarks] = useState(stage.remarks || '');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1383,7 +1308,8 @@ export const EditExecutionStageModal: React.FC<{
       stageNumber: Number(stageNumber),
       stageName,
       status,
-      progress: Number(progress)
+      progress: Number(progress),
+      remarks: remarks.trim()
     });
     onClose();
   };
@@ -1427,6 +1353,20 @@ export const EditExecutionStageModal: React.FC<{
             <label className="block font-semibold text-slate-700 mb-1">Progress (%)</label>
             <input type="number" min={0} max={100} value={progress} onChange={e => setProgress(Number(e.target.value))} required className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200" />
           </div>
+        </div>
+
+        <div>
+          <label className="block font-semibold text-slate-700 mb-1">
+            Work Progress Remarks
+            <span className="text-[10px] text-slate-400 font-normal ml-1.5">(Detailed status notes, blockers, or milestone remarks)</span>
+          </label>
+          <textarea
+            rows={4}
+            value={remarks}
+            onChange={e => setRemarks(e.target.value)}
+            placeholder="Enter detailed work progress remarks, observations, inspection notes, or subcontractor updates..."
+            className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 font-normal leading-relaxed resize-y"
+          />
         </div>
 
         <button type="submit" className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-md shadow-blue-600/30 transition-all mt-4">

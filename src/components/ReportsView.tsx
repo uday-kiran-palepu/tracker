@@ -1,14 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import {
-  BarChart3, Download, Printer, Users, Package, FileCheck2, TrendingUp, Building2
+  BarChart3, Download, Printer, FileCheck2, TrendingUp, Building2, ShieldCheck
 } from 'lucide-react';
 import { Project, MaterialItem, ManpowerItem, ApprovalItem } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface ReportsViewProps {
   projects: Project[];
-  materials: MaterialItem[];
-  manpower: ManpowerItem[];
+  materials?: MaterialItem[];
+  manpower?: ManpowerItem[];
   approvals: ApprovalItem[];
 }
 
@@ -26,9 +26,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       : projects.filter(p => p.id === selectedProjectId);
   }, [projects, selectedProjectId]);
 
-  const totalWorkers = useMemo(() => {
-    return manpower.reduce((acc, curr) => acc + (curr.workerCount ?? curr.count ?? 0), 0);
-  }, [manpower]);
+  const approvedNOCs = useMemo(() => {
+    return approvals.filter(a => a.status === 'Approved').length;
+  }, [approvals]);
 
   const totalArea = useMemo(() => {
     return filteredProjects.reduce((acc, curr) => acc + curr.areaSft, 0);
@@ -67,7 +67,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Analytics & Reports</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Comprehensive audit reports and workforce analytics across NxtWave campuses</p>
+          <p className="text-xs text-slate-500 mt-0.5">Comprehensive audit reports and project analytics across NxtWave campuses</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -111,8 +111,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           <h3 className="text-2xl font-black text-blue-600 mt-1">{totalArea.toLocaleString()} sft</h3>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <span className="text-xs font-semibold text-slate-400">Total Active Manpower</span>
-          <h3 className="text-2xl font-black text-emerald-600 mt-1">{totalWorkers} Workers</h3>
+          <span className="text-xs font-semibold text-slate-400">Approved Statutory NOCs</span>
+          <h3 className="text-2xl font-black text-emerald-600 mt-1">{approvedNOCs} Approved</h3>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <span className="text-xs font-semibold text-slate-400">Pending Approvals</span>
@@ -133,33 +133,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               <Bar dataKey="progress" fill="#2563EB" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Manpower Breakdown Table */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <h3 className="text-base font-bold text-slate-900 mb-4">Manpower & Workforce Distribution</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase">
-                <th className="p-3">Trade / Skill</th>
-                <th className="p-3">Supervisor</th>
-                <th className="p-3">Worker Count</th>
-                <th className="p-3">Log Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-              {manpower.map((mp) => (
-                <tr key={mp.id} className="hover:bg-slate-50">
-                  <td className="p-3 font-bold text-slate-900">{mp.trade}</td>
-                  <td className="p-3 text-slate-600">{mp.supervisor}</td>
-                  <td className="p-3 font-semibold text-blue-600">{(mp.workerCount ?? mp.count ?? 0)} Workers</td>
-                  <td className="p-3 text-slate-500">{mp.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>

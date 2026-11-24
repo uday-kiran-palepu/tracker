@@ -115,10 +115,13 @@ export interface ExecutionStageItem {
   status: 'Pending' | 'In Progress' | 'Completed';
   progress: number;
   subTasksJson: string; // JSON string of ExecutionSubTask[]
+  remarks?: string; // Work Progress Remarks (synced to Google Sheet)
 
   // Runtime helper
   subTasks?: ExecutionSubTask[];
 }
+
+export type ExecutionStage = ExecutionStageItem;
 
 /**
  * Materials Sheet Schema:

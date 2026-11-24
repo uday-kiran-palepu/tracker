@@ -730,153 +730,156 @@ export default function App() {
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-5 md:p-6 lg:p-8">
           <div className="max-w-7xl w-full mx-auto min-w-0">
-          {selectedProject ? (
-            <ProjectDetailView
-              project={selectedProject}
-              currentUser={currentUser}
-              onBack={() => setSelectedProject(null)}
-              executionStages={executionStages}
-              materials={materials}
-              manpower={manpower}
-              documents={documents}
-              photos={[]}
-              dayWiseReports={dayWiseReports}
-              dayWisePhotos={dayWisePhotos}
-              stagePhotos={stagePhotos}
-              siteUpdates={siteUpdates}
-              onOpenAddMaterial={() => setAddMaterialModalOpen(true)}
-              onOpenAddDoc={() => setAddDocumentModalOpen(true)}
-              onOpenAddDayWise={() => setAddDayWiseModalOpen(true)}
-              onOpenAddUpdate={() => { }}
-              onUpdateStageStatus={handleUpdateStageStatus}
-              onToggleSubTask={handleToggleSubTask}
-              onOpenEditProject={handleOpenEditProject}
-              onDeleteMaterial={handleDeleteMaterial}
-              onDeleteDocument={handleDeleteDocument}
-              onDeleteDayWiseReport={handleDeleteDayWiseReport}
-              onDeleteDayWisePhoto={handleDeleteDayWisePhoto}
-              onUploadStagePhoto={handleUploadStagePhoto}
-              onDeleteStagePhoto={handleDeleteStagePhoto}
-              onOpenEditDayWiseReport={(report) => {
-                setReportToEdit(report);
-                setEditDayWiseModalOpen(true);
-              }}
-              onOpenAddStage={() => setAddStageModalOpen(true)}
-              onOpenEditStage={(stage) => {
-                setStageToEdit(stage);
-                setEditStageModalOpen(true);
-              }}
-              onDeleteStage={handleDeleteStage}
-              onOpenAddManpower={() => setAddManpowerModalOpen(true)}
-              onOpenEditManpower={(mp) => {
-                setManpowerToEdit(mp);
-                setEditManpowerModalOpen(true);
-              }}
-              onDeleteManpower={handleDeleteManpower}
-            />
-          ) : (
-            <>
-              {activeTab === 'dashboard' && (
-                <DashboardView
-                  projects={projects}
-                  siteUpdates={siteUpdates}
-                  setActiveTab={setActiveTab}
-                  setSelectedStatusFilter={setSelectedStatusFilter}
-                  setSelectedHealthFilter={setSelectedHealthFilter}
-                  onSelectProject={setSelectedProject}
-                />
-              )}
+            {selectedProject ? (
+              <ProjectDetailView
+                project={selectedProject}
+                currentUser={currentUser}
+                onBack={() => setSelectedProject(null)}
+                executionStages={executionStages}
+                materials={materials}
+                manpower={manpower}
+                documents={documents}
+                photos={[]}
+                dayWiseReports={dayWiseReports}
+                dayWisePhotos={dayWisePhotos}
+                stagePhotos={stagePhotos}
+                siteUpdates={siteUpdates}
+                approvals={approvals}
+                onOpenAddApproval={() => setAddApprovalModalOpen(true)}
+                onDeleteApproval={handleDeleteApproval}
+                onOpenAddMaterial={() => setAddMaterialModalOpen(true)}
+                onOpenAddDoc={() => setAddDocumentModalOpen(true)}
+                onOpenAddDayWise={() => setAddDayWiseModalOpen(true)}
+                onOpenAddUpdate={() => { }}
+                onUpdateStageStatus={handleUpdateStageStatus}
+                onToggleSubTask={handleToggleSubTask}
+                onOpenEditProject={handleOpenEditProject}
+                onDeleteMaterial={handleDeleteMaterial}
+                onDeleteDocument={handleDeleteDocument}
+                onDeleteDayWiseReport={handleDeleteDayWiseReport}
+                onDeleteDayWisePhoto={handleDeleteDayWisePhoto}
+                onUploadStagePhoto={handleUploadStagePhoto}
+                onDeleteStagePhoto={handleDeleteStagePhoto}
+                onOpenEditDayWiseReport={(report) => {
+                  setReportToEdit(report);
+                  setEditDayWiseModalOpen(true);
+                }}
+                onOpenAddStage={() => setAddStageModalOpen(true)}
+                onOpenEditStage={(stage) => {
+                  setStageToEdit(stage);
+                  setEditStageModalOpen(true);
+                }}
+                onDeleteStage={handleDeleteStage}
+                onOpenAddManpower={() => setAddManpowerModalOpen(true)}
+                onOpenEditManpower={(mp) => {
+                  setManpowerToEdit(mp);
+                  setEditManpowerModalOpen(true);
+                }}
+                onDeleteManpower={handleDeleteManpower}
+              />
+            ) : (
+              <>
+                {activeTab === 'dashboard' && (
+                  <DashboardView
+                    projects={projects}
+                    siteUpdates={siteUpdates}
+                    setActiveTab={setActiveTab}
+                    setSelectedStatusFilter={setSelectedStatusFilter}
+                    setSelectedHealthFilter={setSelectedHealthFilter}
+                    onSelectProject={setSelectedProject}
+                  />
+                )}
 
-              {activeTab === 'projects' && (
-                <ProjectsView
-                  projects={projects}
-                  currentUser={currentUser}
-                  onSelectProject={setSelectedProject}
-                  onOpenAddProject={() => setAddProjectModalOpen(true)}
-                  onOpenEditProject={handleOpenEditProject}
-                  onDeleteProject={handleDeleteProject}
-                  selectedStatusFilter={selectedStatusFilter}
-                  setSelectedStatusFilter={setSelectedStatusFilter}
-                  selectedHealthFilter={selectedHealthFilter}
-                  setSelectedHealthFilter={setSelectedHealthFilter}
-                />
-              )}
+                {activeTab === 'projects' && (
+                  <ProjectsView
+                    projects={projects}
+                    currentUser={currentUser}
+                    onSelectProject={setSelectedProject}
+                    onOpenAddProject={() => setAddProjectModalOpen(true)}
+                    onOpenEditProject={handleOpenEditProject}
+                    onDeleteProject={handleDeleteProject}
+                    selectedStatusFilter={selectedStatusFilter}
+                    setSelectedStatusFilter={setSelectedStatusFilter}
+                    selectedHealthFilter={selectedHealthFilter}
+                    setSelectedHealthFilter={setSelectedHealthFilter}
+                  />
+                )}
 
-              {activeTab === 'map' && (
-                <MapView
-                  projects={projects}
-                  onSelectProject={setSelectedProject}
-                />
-              )}
+                {activeTab === 'map' && (
+                  <MapView
+                    projects={projects}
+                    onSelectProject={setSelectedProject}
+                  />
+                )}
 
-              {activeTab === 'execution' && (
-                <ExecutionView
-                  projects={projects}
-                  executionStages={executionStages}
-                  currentUser={currentUser}
-                  stagePhotos={stagePhotos}
-                  onUpdateStageStatus={handleUpdateStageStatus}
-                  onToggleSubTask={handleToggleSubTask}
-                  onOpenAddStage={() => setAddStageModalOpen(true)}
-                  onOpenEditStage={(stage) => {
-                    setStageToEdit(stage);
-                    setEditStageModalOpen(true);
-                  }}
-                  onDeleteStage={handleDeleteStage}
-                  onUploadStagePhoto={handleUploadStagePhoto}
-                  onDeleteStagePhoto={handleDeleteStagePhoto}
-                />
-              )}
+                {activeTab === 'execution' && (
+                  <ExecutionView
+                    projects={projects}
+                    executionStages={executionStages}
+                    currentUser={currentUser}
+                    stagePhotos={stagePhotos}
+                    onUpdateStageStatus={handleUpdateStageStatus}
+                    onToggleSubTask={handleToggleSubTask}
+                    onOpenAddStage={() => setAddStageModalOpen(true)}
+                    onOpenEditStage={(stage) => {
+                      setStageToEdit(stage);
+                      setEditStageModalOpen(true);
+                    }}
+                    onDeleteStage={handleDeleteStage}
+                    onUploadStagePhoto={handleUploadStagePhoto}
+                    onDeleteStagePhoto={handleDeleteStagePhoto}
+                  />
+                )}
 
-              {activeTab === 'reports' && (
-                <ReportsView
-                  projects={projects}
-                  materials={materials}
-                  manpower={manpower}
-                  approvals={approvals}
-                />
-              )}
+                {activeTab === 'reports' && (
+                  <ReportsView
+                    projects={projects}
+                    materials={materials}
+                    manpower={manpower}
+                    approvals={approvals}
+                  />
+                )}
 
-              {activeTab === 'approvals' && (
-                <ApprovalsView
-                  approvals={approvals}
-                  currentUser={currentUser}
-                  onOpenAddApproval={() => setAddApprovalModalOpen(true)}
-                  onUpdateApprovalStatus={handleUpdateApprovalStatus}
-                  onDeleteApproval={handleDeleteApproval}
-                />
-              )}
+                {activeTab === 'approvals' && (
+                  <ApprovalsView
+                    approvals={approvals}
+                    currentUser={currentUser}
+                    onOpenAddApproval={() => setAddApprovalModalOpen(true)}
+                    onUpdateApprovalStatus={handleUpdateApprovalStatus}
+                    onDeleteApproval={handleDeleteApproval}
+                  />
+                )}
 
-              {activeTab === 'documents' && (
-                <DocumentsView
-                  documents={documents}
-                  currentUser={currentUser}
-                  onOpenAddDoc={() => setAddDocumentModalOpen(true)}
-                  onDeleteDocument={handleDeleteDocument}
-                />
-              )}
+                {activeTab === 'documents' && (
+                  <DocumentsView
+                    documents={documents}
+                    currentUser={currentUser}
+                    onOpenAddDoc={() => setAddDocumentModalOpen(true)}
+                    onDeleteDocument={handleDeleteDocument}
+                  />
+                )}
 
-              {activeTab === 'settings' && (
-                <SettingsView
-                  currentUser={currentUser}
-                  onOpenLogin={() => setLoginModalOpen(true)}
-                  onLogout={handleLogout}
-                  onOpenAppsScriptModal={() => setAppsScriptModalOpen(true)}
-                  isSyncing={isSyncing}
-                  isConnected={isConnected}
-                  lastSyncTime={lastSyncTime}
-                  appName={appName}
-                  appSettings={appSettings}
-                  onUpdateAppSettings={handleUpdateAppSettings}
-                  onUpdateAppName={(name) => setAppName(name)}
-                  onUpdateCurrentUser={(u) => setCurrentUser(u)}
-                  databaseMeta={databaseMeta}
-                  onSwitchDatabase={handleSwitchDatabase}
-                  onRefreshData={() => syncData({ isSilent: false, fresh: true })}
-                />
-              )}
-            </>
-          )}
+                {activeTab === 'settings' && (
+                  <SettingsView
+                    currentUser={currentUser}
+                    onOpenLogin={() => setLoginModalOpen(true)}
+                    onLogout={handleLogout}
+                    onOpenAppsScriptModal={() => setAppsScriptModalOpen(true)}
+                    isSyncing={isSyncing}
+                    isConnected={isConnected}
+                    lastSyncTime={lastSyncTime}
+                    appName={appName}
+                    appSettings={appSettings}
+                    onUpdateAppSettings={handleUpdateAppSettings}
+                    onUpdateAppName={(name) => setAppName(name)}
+                    onUpdateCurrentUser={(u) => setCurrentUser(u)}
+                    databaseMeta={databaseMeta}
+                    onSwitchDatabase={handleSwitchDatabase}
+                    onRefreshData={() => syncData({ isSilent: false, fresh: true })}
+                  />
+                )}
+              </>
+            )}
           </div>
         </main>
       </div>

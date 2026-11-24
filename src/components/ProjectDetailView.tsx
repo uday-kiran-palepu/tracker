@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ArrowLeft, MapPin, Calendar, Users, FileText, ImageIcon, 
-  Layers, Package, CheckCircle2, Clock, Plus, ExternalLink, Trash2, 
-  ShieldCheck, AlertCircle, Building2, ChevronLeft, ChevronRight, X, Sparkles, 
+import {
+  ArrowLeft, MapPin, Calendar, Users, FileText, ImageIcon,
+  Layers, Package, CheckCircle2, Clock, Plus, ExternalLink, Trash2,
+  ShieldCheck, AlertCircle, Building2, ChevronLeft, ChevronRight, X, Sparkles,
   AlertTriangle, DollarSign, Wallet, TrendingUp, Edit3, Upload, Phone, PhoneCall,
-  UserCheck, Camera
+  UserCheck, Camera, FileCheck2
 } from 'lucide-react';
-import { 
-  Project, User, ExecutionStageItem, MaterialItem, ManpowerItem, DocumentItem, 
-  PhotoItem, SiteUpdateItem, DayWiseReport, DayWisePhoto, StagePhoto, StageType 
+import {
+  Project, User, ExecutionStageItem, MaterialItem, ManpowerItem, DocumentItem,
+  PhotoItem, SiteUpdateItem, DayWiseReport, DayWisePhoto, StagePhoto, StageType, ApprovalItem
 } from '../types';
 import { formatDate } from '../utils/date';
 import { getReliableImageUrl, handleImageFallback } from '../utils/image';
+import { sanitizeExternalUrl } from '../utils/security';
 import { StagePhotosSection } from './StagePhotosSection';
 
 interface ProjectDetailViewProps {
@@ -19,15 +20,19 @@ interface ProjectDetailViewProps {
   currentUser: User;
   onBack: () => void;
   executionStages: ExecutionStageItem[];
-  materials: MaterialItem[];
-  manpower: ManpowerItem[];
+  materials?: MaterialItem[];
+  manpower?: ManpowerItem[];
   documents: DocumentItem[];
   photos: PhotoItem[];
   dayWiseReports: DayWiseReport[];
   dayWisePhotos: DayWisePhoto[];
   stagePhotos?: StagePhoto[];
   siteUpdates: SiteUpdateItem[];
-  onOpenAddMaterial: () => void;
+  approvals?: ApprovalItem[];
+  onOpenAddApproval?: () => void;
+  onUpdateApprovalStatus?: (id: string, status: 'Pending' | 'Approved' | 'Rejected' | 'Under Review') => void;
+  onDeleteApproval?: (id: string) => void;
+  onOpenAddMaterial?: () => void;
   onOpenAddDoc: () => void;
   onOpenAddDayWise: () => void;
   onOpenAddUpdate: () => void;
@@ -63,14 +68,18 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   currentUser,
   onBack,
   executionStages,
-  materials,
-  manpower,
+  materials = [],
+  manpower = [],
   documents,
   photos,
   dayWiseReports,
   dayWisePhotos,
   stagePhotos = [],
   siteUpdates,
+  approvals = [],
+  onOpenAddApproval,
+  onUpdateApprovalStatus,
+  onDeleteApproval,
   onOpenAddMaterial,
   onOpenAddDoc,
   onOpenAddDayWise,
@@ -92,11 +101,12 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   onUploadStagePhoto,
   onDeleteStagePhoto
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'progress' | 'execution' | 'materials' | 'manpower' | 'photos'>('overview');
+  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'execution' | 'photos' | 'approvals'>('overview');
   const [expandedStageId, setExpandedStageId] = useState<string | null>(null);
 
   const isCoordinator = currentUser.role === 'Project Coordinator';
   const projStages = executionStages.filter(s => String(s.projectId || '').trim() === String(project.id || '').trim());
+  const projApprovals = approvals.filter(a => String(a.projectId || '').trim() === String(project.id || '').trim());
   const projMaterials = materials.filter(m => String(m.projectId || '').trim() === String(project.id || '').trim());
   const projManpower = manpower.filter(mp => String(mp.projectId || '').trim() === String(project.id || '').trim());
   const projDocs = documents.filter(d => String(d.projectId || '').trim() === String(project.id || '').trim());
@@ -110,7 +120,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   const allDaysSet = new Set<number>();
   projReports.forEach(r => allDaysSet.add(Number(r.dayNumber)));
   projDayPhotos.forEach(p => allDaysSet.add(Number(p.dayNumber)));
-  
+
   // Sort days descending (Day 3, Day 2, Day 1)
   const sortedDays = Array.from(allDaysSet).sort((a, b) => b - a);
 
@@ -185,18 +195,16 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
               <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200 font-mono">
                 {project.labCode || project.code || project.id.toUpperCase()}
               </span>
-              <span className={`whitespace-nowrap shrink-0 inline-flex items-center text-xs font-bold px-3 py-1 rounded-full text-white ${
-                project.status === 'Active' ? 'bg-blue-600' :
-                project.status === 'In Design' ? 'bg-purple-600' :
-                project.status === 'In Execution' ? 'bg-amber-600' : 'bg-emerald-600'
-              }`}>
+              <span className={`whitespace-nowrap shrink-0 inline-flex items-center text-xs font-bold px-3 py-1 rounded-full text-white ${project.status === 'Active' ? 'bg-blue-600' :
+                  project.status === 'In Design' ? 'bg-purple-600' :
+                    project.status === 'In Execution' ? 'bg-amber-600' : 'bg-emerald-600'
+                }`}>
                 {project.status}
               </span>
-              <span className={`whitespace-nowrap shrink-0 inline-flex items-center text-xs font-bold px-3 py-1 rounded-full ${
-                project.health === 'On Track' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
-                project.health === 'At Risk' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
-                'bg-rose-50 text-rose-600 border border-rose-200'
-              }`}>
+              <span className={`whitespace-nowrap shrink-0 inline-flex items-center text-xs font-bold px-3 py-1 rounded-full ${project.health === 'On Track' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                  project.health === 'At Risk' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
+                    'bg-rose-50 text-rose-600 border border-rose-200'
+                }`}>
                 {project.health}
               </span>
             </div>
@@ -220,13 +228,9 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                 <span>Edit Project</span>
               </button>
             )}
-            <div className="text-right hidden sm:block">
-              <span className="text-[10px] text-slate-400 font-medium block">Allocated Budget</span>
-              <span className="text-sm font-bold text-slate-900">₹{(budgetAllocated / 10000000).toFixed(2)} Cr</span>
-            </div>
             <div className="text-right hidden sm:block pl-4 border-l border-slate-200">
-              <span className="text-[10px] text-slate-400 font-medium block">Spent To Date</span>
-              <span className="text-sm font-bold text-blue-600">₹{(budgetSpent / 10000000).toFixed(2)} Cr</span>
+              <span className="text-[10px] text-slate-400 font-medium block">Milestone Progress</span>
+              <span className="text-sm font-bold text-blue-600">{project.progress}% Complete</span>
             </div>
           </div>
         </div>
@@ -234,12 +238,10 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
         {/* Sub-Tabs navigation */}
         <div className="flex items-center gap-2 overflow-x-auto pt-6 mt-6 border-t border-slate-100 no-scrollbar">
           {[
-            { id: 'overview', label: 'Overview & Budget', icon: Building2 },
-            { id: 'progress', label: `Daily Reports (${projReports.length})`, icon: Clock },
-            { id: 'execution', label: 'Execution Stages', icon: Layers },
-            { id: 'materials', label: 'Materials & Stock', icon: Package },
-            { id: 'manpower', label: 'Manpower', icon: Users },
-            { id: 'photos', label: `Day-Wise Photos (${projDayPhotos.length})`, icon: ImageIcon }
+            { id: 'overview', label: 'Overview', icon: Building2 },
+            { id: 'execution', label: `Execution Stages (${projStages.length})`, icon: Layers },
+            { id: 'photos', label: `Day-Wise Reports & Photos (${projDayPhotos.length})`, icon: ImageIcon },
+            { id: 'approvals', label: `Approvals (${projApprovals.length})`, icon: FileCheck2 }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeSubTab === tab.id;
@@ -247,11 +249,10 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveSubTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                  isActive
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${isActive
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                     : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-                }`}
+                  }`}
               >
                 <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                 <span>{tab.label}</span>
@@ -261,201 +262,95 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
         </div>
       </div>
 
-      {/* SUB-TAB 1: OVERVIEW & BUDGET */}
+      {/* SUB-TAB 1: OVERVIEW */}
       {activeSubTab === 'overview' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left 2 cols: Hero Image, Work Packages & Budget Progress */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
-              <div className="h-64 sm:h-80 relative">
-                <img 
-                  src={getReliableImageUrl(heroImg)} 
-                  alt="" 
-                  className="w-full h-full object-cover" 
-                  loading="lazy" 
-                  decoding="async"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => handleImageFallback(e, heroImg)}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4 text-white">
-                  <p className="text-xs font-medium text-blue-300">NxtWave Campus Infrastructure</p>
-                  <h3 className="text-lg font-bold">{project.description || `${project.name} - Built-up Area: ${Number(project.areaSft || 0).toLocaleString()} sft.`}</h3>
-                </div>
-              </div>
-            </div>
-
-            {/* Budget Utilization Card */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <Wallet className="w-5 h-5 text-blue-600" />
-                    <span>Project Financials & Budget Tracking</span>
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Approved capital expenditure and field deployment tracking</p>
-                </div>
-                {isCoordinator && (
-                  <button
-                    onClick={() => onOpenEditProject?.(project)}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Update Budget</span>
-                  </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                  <span className="text-[11px] text-slate-400 font-semibold block">Budget Allocated</span>
-                  <span className="text-xl font-black text-slate-900 mt-1 block">
-                    ₹{(budgetAllocated / 10000000).toFixed(2)} Cr
-                  </span>
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">Approved CapEx</span>
-                </div>
-                <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100">
-                  <span className="text-[11px] text-blue-700 font-semibold block">Budget Spent</span>
-                  <span className="text-xl font-black text-blue-600 mt-1 block">
-                    ₹{(budgetSpent / 10000000).toFixed(2)} Cr
-                  </span>
-                  <span className="text-[10px] text-blue-500 mt-0.5 block">{budgetPercent}% Utilized</span>
-                </div>
-                <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100">
-                  <span className="text-[11px] text-emerald-700 font-semibold block">Remaining Balance</span>
-                  <span className="text-xl font-black text-emerald-600 mt-1 block">
-                    ₹{(remainingBudget / 10000000).toFixed(2)} Cr
-                  </span>
-                  <span className="text-[10px] text-emerald-500 mt-0.5 block">Available runway</span>
-                </div>
-              </div>
-
-              {/* Budget Progress Bar */}
-              <div className="pt-2">
-                <div className="flex items-center justify-between text-xs font-semibold mb-1.5">
-                  <span className="text-slate-600">Fund Utilization</span>
-                  <span className="text-blue-600">{budgetPercent}%</span>
-                </div>
-                <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-500"
-                    style={{ width: `${budgetPercent}%` }}
+            {/* Left 2 cols: Hero Image & Project Summary */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+                <div className="h-64 sm:h-80 relative">
+                  <img
+                    src={getReliableImageUrl(heroImg)}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => handleImageFallback(e, heroImg)}
                   />
-                </div>
-              </div>
-            </div>
-
-            {/* Work Package Progress */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-              <h3 className="text-base font-bold text-slate-900 mb-4">Work Package Breakdown</h3>
-              <div className="space-y-4 text-xs">
-                <div>
-                  <div className="flex items-center justify-between font-semibold mb-1">
-                    <span className="text-slate-700">Civil & Interior Works</span>
-                    <span className="text-blue-600">{project.civilProgress ?? project.workPackages?.civilInterior ?? 0}%</span>
-                  </div>
-                  <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-blue-600 rounded-full" style={{ width: `${project.civilProgress ?? project.workPackages?.civilInterior ?? 0}%` }} />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between font-semibold mb-1">
-                    <span className="text-slate-700">MEP (HVAC, Electrical, IT Cabling)</span>
-                    <span className="text-emerald-600">{project.mepProgress ?? project.workPackages?.mep ?? 0}%</span>
-                  </div>
-                  <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-emerald-600 rounded-full" style={{ width: `${project.mepProgress ?? project.workPackages?.mep ?? 0}%` }} />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between font-semibold mb-1">
-                    <span className="text-slate-700">Furniture & AV Setup</span>
-                    <span className="text-amber-600">{project.furnitureProgress ?? project.workPackages?.furnitureAv ?? 0}%</span>
-                  </div>
-                  <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-amber-500 rounded-full" style={{ width: `${project.furnitureProgress ?? project.workPackages?.furnitureAv ?? 0}%` }} />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between font-semibold mb-1">
-                    <span className="text-slate-700">Branding & Signage</span>
-                    <span className="text-purple-600">{project.brandingProgress ?? project.workPackages?.brandingSignage ?? 0}%</span>
-                  </div>
-                  <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-purple-600 rounded-full" style={{ width: `${project.brandingProgress ?? project.workPackages?.brandingSignage ?? 0}%` }} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4 text-white">
+                    <p className="text-xs font-medium text-blue-300">NxtWave Campus Infrastructure</p>
+                    <h3 className="text-lg font-bold">{project.description || `${project.name} - Built-up Area: ${Number(project.areaSft || 0).toLocaleString()} sft.`}</h3>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Right col: Project Progress Card & Key Dates */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-              <h3 className="text-base font-bold text-slate-900 mb-4">Project Progress Card</h3>
-              <div className="text-center py-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <span className="text-4xl font-black text-blue-600">{project.progress}%</span>
-                <span className="text-xs font-semibold text-slate-500 block mt-1">Overall Milestone Completion</span>
-              </div>
+            {/* Right col: Project Progress Card & Executive POC */}
+            <div className="space-y-6">
+              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <h3 className="text-base font-bold text-slate-900 mb-4">Project Progress Card</h3>
+                <div className="text-center py-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-4xl font-black text-blue-600">{project.progress}%</span>
+                  <span className="text-xs font-semibold text-slate-500 block mt-1">Overall Milestone Completion</span>
+                </div>
 
-              <div className="space-y-3 mt-6 text-xs">
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <span className="text-slate-500">Start Date</span>
-                  <span className="font-bold text-slate-800">{formatDate(project.startDate)}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <span className="text-slate-500">Target Handover</span>
-                  <span className="font-bold text-slate-800">{formatDate(targetDateStr)}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <span className="text-slate-500">Elapsed Execution Time</span>
-                  <span className="font-bold text-blue-600">{elapsedDays} Days</span>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-slate-500">Remaining to Handover</span>
-                  <span className="font-bold text-emerald-600">{remainingDays} Days</span>
-                </div>
-              </div>
-            </div>
-
-            {/* NxtWave Executive POC Card */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-bold text-slate-900">NxtWave Executive POC</h3>
-                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
-                  Assigned Lead
-                </span>
-              </div>
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
-                    {(project.pocName || 'NW').slice(0, 2).toUpperCase()}
+                <div className="space-y-3 mt-6 text-xs">
+                  <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-500">Start Date</span>
+                    <span className="font-bold text-slate-800">{formatDate(project.startDate)}</span>
                   </div>
-                  <div className="min-w-0">
-                    <h4 className="text-sm font-bold text-slate-900 truncate">{project.pocName || 'Not Assigned'}</h4>
-                    <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
-                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate">{String(project.pocPhone || 'Not Provided')}</span>
-                    </p>
+                  <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-500">Target Handover</span>
+                    <span className="font-bold text-slate-800">{formatDate(targetDateStr)}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-500">Elapsed Execution Time</span>
+                    <span className="font-bold text-blue-600">{elapsedDays} Days</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-slate-500">Remaining to Handover</span>
+                    <span className="font-bold text-emerald-600">{remainingDays} Days</span>
                   </div>
                 </div>
-                {project.pocPhone && (
-                  <a
-                    href={`tel:${String(project.pocPhone).replace(/[^\d+]/g, '')}`}
-                    className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 transition-all flex items-center justify-center shrink-0"
-                    title={`Call ${project.pocName || 'Executive POC'}`}
-                  >
-                    <PhoneCall className="w-4 h-4" />
-                  </a>
-                )}
+              </div>
+
+              {/* NxtWave Executive POC Card */}
+              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-bold text-slate-900">NxtWave Executive POC</h3>
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
+                    Assigned Lead
+                  </span>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
+                      {(project.pocName || 'NW').slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-bold text-slate-900 truncate">{project.pocName || 'Not Assigned'}</h4>
+                      <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
+                        <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{String(project.pocPhone || 'Not Provided')}</span>
+                      </p>
+                    </div>
+                  </div>
+                  {project.pocPhone && (
+                    <a
+                      href={`tel:${String(project.pocPhone).replace(/[^\d+]/g, '')}`}
+                      className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 transition-all flex items-center justify-center shrink-0"
+                      title={`Call ${project.pocName || 'Executive POC'}`}
+                    >
+                      <PhoneCall className="w-4 h-4" />
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
           {/* Reusable Stage Photos Section */}
           <StagePhotosSection
@@ -463,8 +358,8 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             projectName={project.name}
             stagePhotos={stagePhotos}
             isCoordinator={isCoordinator}
-            onUploadStagePhoto={onUploadStagePhoto || (async () => {})}
-            onDeleteStagePhoto={onDeleteStagePhoto || (async () => {})}
+            onUploadStagePhoto={onUploadStagePhoto || (async () => { })}
+            onDeleteStagePhoto={onDeleteStagePhoto || (async () => { })}
           />
         </div>
       )}
@@ -587,15 +482,14 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                 const subTasks = stage.subTasks || [];
                 return (
                   <div key={stage.id} className="rounded-xl border border-slate-200 bg-slate-50/50 overflow-hidden transition-all">
-                    <div 
+                    <div
                       onClick={() => setExpandedStageId(isExpanded ? null : stage.id)}
                       className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:bg-slate-100/60"
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0 ${
-                          stage.status === 'Completed' ? 'bg-emerald-600' :
-                          stage.status === 'In Progress' ? 'bg-blue-600' : 'bg-slate-400'
-                        }`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0 ${stage.status === 'Completed' ? 'bg-emerald-600' :
+                            stage.status === 'In Progress' ? 'bg-blue-600' : 'bg-slate-400'
+                          }`}>
                           {stage.stageNumber}
                         </div>
                         <div>
@@ -610,11 +504,10 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                       </div>
 
                       <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
-                        <span className={`whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-bold px-3 py-1 rounded-full ${
-                          stage.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
-                          stage.status === 'In Progress' ? 'bg-blue-50 text-blue-600 border border-blue-200' :
-                          'bg-slate-100 text-slate-500'
-                        }`}>
+                        <span className={`whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-bold px-3 py-1 rounded-full ${stage.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                            stage.status === 'In Progress' ? 'bg-blue-50 text-blue-600 border border-blue-200' :
+                              'bg-slate-100 text-slate-500'
+                          }`}>
                           {stage.status} ({stage.progress}%)
                         </span>
 
@@ -652,6 +545,26 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                       </div>
                     </div>
 
+                    {/* Stage Progress Bar */}
+                    <div className="px-4 pb-2">
+                      <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            stage.status === 'Completed' ? 'bg-emerald-500' : 'bg-blue-600'
+                          }`}
+                          style={{ width: `${stage.progress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Work Progress Remarks */}
+                    {stage.remarks && (
+                      <div className="mx-4 mb-3 p-3 rounded-xl bg-blue-50/70 border border-blue-100/90 text-xs text-slate-800">
+                        <span className="font-bold text-blue-900 block mb-0.5 text-[11px]">Work Progress Remarks:</span>
+                        <p className="whitespace-pre-wrap leading-relaxed text-slate-700 text-xs">{stage.remarks}</p>
+                      </div>
+                    )}
+
                     {isExpanded && (
                       <div className="p-4 bg-white border-t border-slate-200/80 space-y-2">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Stage Checklist</span>
@@ -659,26 +572,24 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                           <p className="text-xs text-slate-400 italic">No checklist sub-tasks assigned.</p>
                         ) : (
                           subTasks.map(sub => (
-                            <div 
+                            <div
                               key={sub.id}
                               onClick={() => isCoordinator && onToggleSubTask?.(stage.id, sub.id)}
-                              className={`p-3 rounded-lg border flex items-center justify-between text-xs transition-colors ${
-                                isCoordinator ? 'cursor-pointer hover:bg-slate-50' : ''
-                              } ${sub.completed ? 'bg-emerald-50/40 border-emerald-200/70 text-emerald-950' : 'bg-slate-50/50 border-slate-200 text-slate-700'}`}
+                              className={`p-3 rounded-lg border flex items-center justify-between text-xs transition-colors ${isCoordinator ? 'cursor-pointer hover:bg-slate-50' : ''
+                                } ${sub.completed ? 'bg-emerald-50/40 border-emerald-200/70 text-emerald-950' : 'bg-slate-50/50 border-slate-200 text-slate-700'}`}
                             >
                               <div className="flex items-center gap-2.5">
-                                <input 
-                                  type="checkbox" 
+                                <input
+                                  type="checkbox"
                                   checked={sub.completed}
-                                  onChange={() => {}}
+                                  onChange={() => { }}
                                   disabled={!isCoordinator}
                                   className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
                                 />
                                 <span className={sub.completed ? 'line-through text-slate-500' : 'font-medium'}>{sub.name}</span>
                               </div>
-                              <span className={`whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded ${
-                                sub.completed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
-                              }`}>
+                              <span className={`whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded ${sub.completed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+                                }`}>
                                 {sub.completed ? 'Completed' : 'Pending'}
                               </span>
                             </div>
@@ -694,21 +605,22 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
         </div>
       )}
 
-      {/* SUB-TAB 4: MATERIALS */}
-      {activeSubTab === 'materials' && (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
+      {/* SUB-TAB 4: APPROVALS & COMPLIANCE */}
+      {activeSubTab === 'approvals' && (
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
             <div>
-              <h3 className="text-base font-bold text-slate-900">Materials & Stock Inventory</h3>
-              <p className="text-xs text-slate-500">Delivered vs required stock items</p>
+              <h3 className="text-base font-bold text-slate-900">Project Approvals & Statutory NOCs</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Municipal clearances, landlord NOCs, and compliance certifications</p>
             </div>
-            {isCoordinator && (
+            {isCoordinator && onOpenAddApproval && (
               <button
-                onClick={onOpenAddMaterial}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all"
+                type="button"
+                onClick={onOpenAddApproval}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all whitespace-nowrap shrink-0"
               >
                 <Plus className="w-4 h-4" />
-                <span>Add Material</span>
+                <span>+ Add Approval</span>
               </button>
             )}
           </div>
@@ -717,112 +629,73 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase">
-                  <th className="p-3">Material Item</th>
-                  <th className="p-3">Category</th>
-                  <th className="p-3">Required</th>
-                  <th className="p-3">Delivered</th>
+                  <th className="p-3">Approval Name</th>
+                  <th className="p-3">Requested Date</th>
+                  <th className="p-3">Approver</th>
                   <th className="p-3">Status</th>
-                  {isCoordinator && <th className="p-3 text-right">Actions</th>}
+                  <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                {projMaterials.map((m) => (
-                  <tr key={m.id} className="hover:bg-slate-50">
-                    <td className="p-3 font-bold text-slate-900">{m.itemName || m.name}</td>
-                    <td className="p-3 text-slate-600">{m.category}</td>
-                    <td className="p-3">{m.requiredQty} {m.unit || ''}</td>
-                    <td className="p-3 text-blue-600 font-semibold">{m.deliveredQty} {m.unit || ''}</td>
-                    <td className="p-3">
-                      <span className={`whitespace-nowrap shrink-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        m.status === 'In Stock' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
-                        m.status === 'Low Stock' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
-                        'bg-blue-50 text-blue-600 border border-blue-200'
-                      }`}>
-                        {m.status}
-                      </span>
+                {projApprovals.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-slate-400 italic">
+                      No statutory approvals or NOCs registered for this campus yet.
                     </td>
-                    {isCoordinator && (
-                      <td className="p-3 text-right">
-                        <button
-                          onClick={() => {
-                            if (confirm(`Delete material ${m.itemName || m.name}?`)) {
-                              onDeleteMaterial?.(m.id);
-                            }
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    )}
                   </tr>
-                ))}
+                ) : (
+                  projApprovals.map((app) => {
+                    const docUrl = app.documentUrl || app.link;
+                    return (
+                      <tr key={app.id} className="hover:bg-slate-50">
+                        <td className="p-3 font-bold text-slate-900">{app.approvalName || app.name}</td>
+                        <td className="p-3 text-slate-500">{formatDate(app.requestedDate)}</td>
+                        <td className="p-3 text-slate-600">{app.approver}</td>
+                        <td className="p-3">
+                          <span className={`whitespace-nowrap shrink-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            app.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                            app.status === 'Under Review' ? 'bg-blue-50 text-blue-600 border border-blue-200' :
+                            app.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border border-rose-200' :
+                            'bg-amber-50 text-amber-600 border border-amber-200'
+                          }`}>
+                            {app.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {docUrl && (
+                              <a
+                                href={sanitizeExternalUrl(docUrl)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold text-xs transition-all whitespace-nowrap shrink-0"
+                              >
+                                <span>View Doc</span>
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+                            {isCoordinator && onDeleteApproval && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (confirm(`Delete approval "${app.approvalName || app.name}"?`)) {
+                                    onDeleteApproval(app.id);
+                                  }
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                                title="Delete Approval"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {/* SUB-TAB 5: MANPOWER */}
-      {activeSubTab === 'manpower' && (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Workforce & Manpower Deployment</h3>
-              <p className="text-xs text-slate-500">Active workers across trades: <span className="font-bold text-blue-600">{totalWorkers}</span></p>
-            </div>
-            {isCoordinator && (
-              <button
-                onClick={onOpenAddManpower}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all"
-              >
-                <Plus className="w-4 h-4" />
-                <span>+ Add Manpower Log</span>
-              </button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {projManpower.length === 0 ? (
-              <p className="text-xs text-slate-400 text-center col-span-2 py-8">No workforce logs recorded yet.</p>
-            ) : (
-              projManpower.map((mp) => (
-                <div key={mp.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between">
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900">{mp.trade}</h4>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Supervisor: {mp.supervisor} • {formatDate(mp.date)}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <span className="text-lg font-black text-blue-600">{mp.workerCount ?? mp.count}</span>
-                      <span className="text-[10px] text-slate-400 block">Workers</span>
-                    </div>
-                    {isCoordinator && (
-                      <div className="flex items-center gap-1 pl-2 border-l border-slate-200">
-                        <button
-                          onClick={() => onOpenEditManpower?.(mp)}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
-                          title="Edit Manpower"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm(`Delete manpower log for ${mp.trade}?`)) {
-                              onDeleteManpower?.(mp.id);
-                            }
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50"
-                          title="Delete Manpower"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
           </div>
         </div>
       )}
@@ -885,17 +758,15 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                     <button
                       key={dNum}
                       onClick={() => setSelectedDayNumber(dNum)}
-                      className={`flex flex-col items-start p-3.5 rounded-2xl border transition-all min-w-[150px] text-left shrink-0 ${
-                        isSelected
+                      className={`flex flex-col items-start p-3.5 rounded-2xl border transition-all min-w-[150px] text-left shrink-0 ${isSelected
                           ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/25 ring-2 ring-blue-600/20'
                           : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between w-full">
                         <span className="text-sm font-black">Day {dNum}</span>
-                        <span className={`whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          isSelected ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600'
-                        }`}>
+                        <span className={`whitespace-nowrap shrink-0 inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600'
+                          }`}>
                           {pCount} Photos
                         </span>
                       </div>
@@ -979,15 +850,15 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {activeDayPhotos.map((photo, pIdx) => (
-                      <div 
+                      <div
                         key={photo.id}
                         onClick={() => setLightboxPhoto({ index: pIdx, list: activeDayPhotos })}
                         className="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer h-56"
                       >
-                        <img 
-                          src={getReliableImageUrl(photo)} 
-                          alt={photo.caption || `Day ${activeDay} site photo`} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                        <img
+                          src={getReliableImageUrl(photo)}
+                          alt={photo.caption || `Day ${activeDay} site photo`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           loading="lazy"
                           decoding="async"
                           referrerPolicy="no-referrer"
@@ -1027,7 +898,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
 
       {/* Lightbox Modal Viewer with Click-Outside and Escape Support */}
       {lightboxPhoto && (
-        <div 
+        <div
           className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setLightboxPhoto(null)}
         >
@@ -1078,10 +949,10 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           )}
 
           <div className="max-w-4xl max-h-[85vh] flex flex-col items-center" onClick={e => e.stopPropagation()}>
-            <img 
-              src={getReliableImageUrl(lightboxPhoto.list[lightboxPhoto.index])} 
-              alt="" 
-              className="max-h-[75vh] w-auto object-contain rounded-2xl shadow-2xl" 
+            <img
+              src={getReliableImageUrl(lightboxPhoto.list[lightboxPhoto.index])}
+              alt=""
+              className="max-h-[75vh] w-auto object-contain rounded-2xl shadow-2xl"
               loading="lazy"
               decoding="async"
               referrerPolicy="no-referrer"

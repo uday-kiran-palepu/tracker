@@ -94,12 +94,11 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                         <select
                           value={app.status}
                           onChange={(e) => onUpdateApprovalStatus(app.id, e.target.value as any)}
-                          className={`whitespace-nowrap shrink-0 inline-flex items-center px-3 py-1.5 rounded-lg border text-xs font-bold ${
-                            app.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                            app.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                            app.status === 'Under Review' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                            'bg-rose-50 text-rose-700 border-rose-200'
-                          }`}
+                          className={`whitespace-nowrap shrink-0 inline-flex items-center px-3 py-1.5 rounded-lg border text-xs font-bold ${app.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              app.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                app.status === 'Under Review' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                  'bg-rose-50 text-rose-700 border-rose-200'
+                            }`}
                         >
                           <option value="Pending">Pending</option>
                           <option value="Approved">Approved</option>
@@ -107,11 +106,10 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                           <option value="Rejected">Rejected</option>
                         </select>
                       ) : (
-                        <span className={`whitespace-nowrap shrink-0 inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold ${
-                          app.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                          app.status === 'Pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                          'bg-blue-50 text-blue-700 border border-blue-200'
-                        }`}>
+                        <span className={`whitespace-nowrap shrink-0 inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold ${app.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                            app.status === 'Pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                              'bg-blue-50 text-blue-700 border border-blue-200'
+                          }`}>
                           {app.status}
                         </span>
                       )}

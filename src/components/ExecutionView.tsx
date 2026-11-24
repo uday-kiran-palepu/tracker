@@ -252,6 +252,14 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
                     <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden">
                       <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${selectedStage.progress}%` }} />
                     </div>
+
+                    {/* Work Progress Remarks */}
+                    {selectedStage.remarks && (
+                      <div className="mt-4 p-4 rounded-xl bg-blue-50/70 border border-blue-100/90 text-xs">
+                        <span className="font-bold text-blue-900 block mb-1">Work Progress Remarks:</span>
+                        <p className="whitespace-pre-wrap leading-relaxed text-slate-700">{selectedStage.remarks}</p>
+                      </div>
+                    )}
                   </div>
 
                   <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Granular Verification Sub-tasks</h4>

@@ -32,7 +32,7 @@ var SCHEMA = {
     'id', 'projectId', 'stageCategory', 'stageType', 'caption', 'date', 'driveFileId', 'imageUrl', 'createdAt'
   ],
   ExecutionStages: [
-    'id', 'projectId', 'phase', 'stageNumber', 'stageName', 'description', 'status', 'progress', 'subTasksJson'
+    'id', 'projectId', 'phase', 'stageNumber', 'stageName', 'description', 'status', 'progress', 'subTasksJson', 'remarks'
   ],
   Materials: [
     'id', 'projectId', 'itemName', 'category', 'requiredQty', 'deliveredQty', 'unit', 'status'

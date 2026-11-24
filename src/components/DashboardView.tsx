@@ -370,14 +370,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <h4 className="text-xl font-black text-slate-900 mt-0.5">{totalArea.toLocaleString()} sft</h4>
             </div>
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-xs font-medium text-slate-500">Active Workforce Onsite</span>
-              <h4 className="text-xl font-black text-slate-900 mt-0.5">141 Workers</h4>
+              <span className="text-xs font-medium text-slate-500">Campuses in Execution</span>
+              <h4 className="text-xl font-black text-blue-600 mt-0.5">{executionCount} Campuses</h4>
             </div>
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-xs font-medium text-slate-500">Total Budget Allocated</span>
-              <h4 className="text-xl font-black text-slate-900 mt-0.5">
-                {totalBudgetAllocated > 0 ? `₹${(totalBudgetAllocated / 10000000).toFixed(1)} Cr` : '₹15.2 Cr'}
-              </h4>
+              <span className="text-xs font-medium text-slate-500">Indian Cities Present</span>
+              <h4 className="text-xl font-black text-emerald-600 mt-0.5">{uniqueCitiesCount} Cities</h4>
             </div>
           </div>
 

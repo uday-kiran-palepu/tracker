@@ -273,6 +273,7 @@ export const api = {
           ...stage,
           stageNumber: Number(stage.stageNumber) || 1,
           progress: Number(stage.progress) || 0,
+          remarks: stage.remarks || '',
           subTasks: subTasks || []
         };
       });
