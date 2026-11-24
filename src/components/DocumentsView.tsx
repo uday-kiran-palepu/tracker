@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FolderOpen, Search, ExternalLink, Plus, Filter, Trash2, Upload, FileText } from 'lucide-react';
 import { DocumentItem, User } from '../types';
 import { formatDate } from '../utils/date';
+import { sanitizeExternalUrl } from '../utils/security';
 
 interface DocumentsViewProps {
   documents: DocumentItem[];
@@ -115,9 +116,9 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <a
-                          href={doc.documentUrl || doc.url}
+                          href={sanitizeExternalUrl(doc.documentUrl || doc.url)}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold text-xs transition-all whitespace-nowrap shrink-0"
                         >
                           <span>Open File</span>

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, Copy, Check, Plus, Code, Building2, ExternalLink, Save, 
-  Upload, Image as ImageIcon, Loader2, Trash2, ShieldCheck, AlertCircle, FileText, Lock 
+import {
+  X, Copy, Check, Plus, Code, Building2, ExternalLink, Save,
+  Upload, Image as ImageIcon, Loader2, Trash2, ShieldCheck, AlertCircle, FileText, Lock
 } from 'lucide-react';
-import { 
-  User, Project, ApprovalItem, MaterialItem, DocumentItem, 
-  DayWiseReport, DayWisePhoto, ProjectStatus, ProjectHealth, ManpowerItem, ExecutionStageItem 
+import {
+  User, Project, ApprovalItem, MaterialItem, DocumentItem,
+  DayWiseReport, DayWisePhoto, ProjectStatus, ProjectHealth, ManpowerItem, ExecutionStageItem
 } from '../types';
 import { APPS_SCRIPT_CODE } from '../data/appsScriptCode';
 import { compressImageToBase64 } from '../utils/image';
@@ -35,20 +35,20 @@ export const ModalBase: React.FC<ModalBaseProps> = ({ isOpen, onClose, title, ch
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
       onClick={onClose}
     >
-      <div 
+      <div
         className={`bg-white rounded-2xl shadow-2xl border border-slate-200 w-full ${maxWidth} overflow-hidden animate-in fade-in zoom-in duration-200 my-auto`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-5 border-b border-slate-100">
           <h3 className="text-base font-bold text-slate-900">{title}</h3>
-          <button 
+          <button
             type="button"
-            onClick={onClose} 
-            className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 transition-colors" 
+            onClick={onClose}
+            className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 transition-colors"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -803,7 +803,7 @@ export const AddDayWiseReportAndPhotosModal: React.FC<{
   const [workSummary, setWorkSummary] = useState('');
   const [workersCount, setWorkersCount] = useState<number>(35);
   const [materialsUsed, setMaterialsUsed] = useState('');
-  
+
   const [selectedFiles, setSelectedFiles] = useState<{ file: File; previewUrl: string; caption: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; message: string }>({
@@ -922,7 +922,7 @@ export const AddDayWiseReportAndPhotosModal: React.FC<{
               </span>
             </div>
             <div className="w-full h-2 rounded-full bg-blue-200 overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-blue-600 transition-all duration-300"
                 style={{ width: `${uploadProgress.total > 0 ? (uploadProgress.current / uploadProgress.total) * 100 : 0}%` }}
               />
@@ -933,64 +933,64 @@ export const AddDayWiseReportAndPhotosModal: React.FC<{
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Day Number</label>
-            <input 
-              type="number" 
-              min={1} 
-              value={dayNumber} 
-              onChange={e => setDayNumber(Number(e.target.value))} 
-              required 
+            <input
+              type="number"
+              min={1}
+              value={dayNumber}
+              onChange={e => setDayNumber(Number(e.target.value))}
+              required
               disabled={uploading}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-bold" 
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-bold"
             />
           </div>
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Log Date</label>
-            <input 
-              type="date" 
-              value={date} 
-              onChange={e => setDate(e.target.value)} 
-              required 
+            <input
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              required
               disabled={uploading}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200" 
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200"
             />
           </div>
         </div>
 
         <div>
           <label className="block font-semibold text-slate-700 mb-1">Daily Work Summary</label>
-          <textarea 
-            rows={3} 
-            value={workSummary} 
-            onChange={e => setWorkSummary(e.target.value)} 
-            required 
+          <textarea
+            rows={3}
+            value={workSummary}
+            onChange={e => setWorkSummary(e.target.value)}
+            required
             disabled={uploading}
-            placeholder="Key milestones accomplished today (e.g. false ceiling grid framing completed, wiring pulled)..." 
-            className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200" 
+            placeholder="Key milestones accomplished today (e.g. false ceiling grid framing completed, wiring pulled)..."
+            className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Workers Onsite Count</label>
-            <input 
-              type="number" 
-              min={0} 
-              value={workersCount} 
-              onChange={e => setWorkersCount(Number(e.target.value))} 
-              required 
+            <input
+              type="number"
+              min={0}
+              value={workersCount}
+              onChange={e => setWorkersCount(Number(e.target.value))}
+              required
               disabled={uploading}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200" 
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200"
             />
           </div>
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Materials Used / Staged</label>
-            <input 
-              type="text" 
-              value={materialsUsed} 
-              onChange={e => setMaterialsUsed(e.target.value)} 
+            <input
+              type="text"
+              value={materialsUsed}
+              onChange={e => setMaterialsUsed(e.target.value)}
               disabled={uploading}
-              placeholder="e.g. 50 LED panels, 20 bags adhesive" 
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200" 
+              placeholder="e.g. 50 LED panels, 20 bags adhesive"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200"
             />
           </div>
         </div>
@@ -1009,13 +1009,13 @@ export const AddDayWiseReportAndPhotosModal: React.FC<{
             <Upload className="w-8 h-8 text-blue-500 mb-2" />
             <span className="text-xs font-bold text-slate-800">Click or Drag photos to select</span>
             <span className="text-[11px] text-slate-400 mt-0.5">JPEG, PNG, WebP • Multi-select supported</span>
-            <input 
-              type="file" 
-              accept="image/*" 
-              multiple 
-              onChange={handleFileChange} 
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileChange}
               disabled={uploading}
-              className="hidden" 
+              className="hidden"
             />
           </label>
 
@@ -1030,7 +1030,7 @@ export const AddDayWiseReportAndPhotosModal: React.FC<{
                     <img src={item.previewUrl} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-bold text-slate-800 truncate">{item.file.name}</p>
-                      <input 
+                      <input
                         type="text"
                         placeholder="Caption (optional)"
                         value={item.caption}
@@ -1040,8 +1040,8 @@ export const AddDayWiseReportAndPhotosModal: React.FC<{
                       />
                     </div>
                     {!uploading && (
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => handleRemoveFile(idx)}
                         className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50"
                       >
@@ -1055,8 +1055,8 @@ export const AddDayWiseReportAndPhotosModal: React.FC<{
           )}
         </div>
 
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={uploading}
           className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-400 text-white font-bold text-xs shadow-md shadow-blue-600/30 transition-all mt-4 flex items-center justify-center gap-2"
         >
@@ -1555,18 +1555,16 @@ export const AddDocumentModal: React.FC<{
           <button
             type="button"
             onClick={() => setUploadMode('file')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-              uploadMode === 'file' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600'
-            }`}
+            className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${uploadMode === 'file' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600'
+              }`}
           >
             Direct File Upload
           </button>
           <button
             type="button"
             onClick={() => setUploadMode('link')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-              uploadMode === 'link' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600'
-            }`}
+            className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${uploadMode === 'link' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600'
+              }`}
           >
             External Cloud Link
           </button>
@@ -1595,19 +1593,19 @@ export const AddDocumentModal: React.FC<{
         ) : (
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Document URL</label>
-            <input 
-              type="url" 
-              value={documentUrl} 
-              onChange={e => setDocumentUrl(e.target.value)} 
-              required 
-              placeholder="https://drive.google.com/..." 
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200" 
+            <input
+              type="url"
+              value={documentUrl}
+              onChange={e => setDocumentUrl(e.target.value)}
+              required
+              placeholder="https://drive.google.com/..."
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200"
             />
           </div>
         )}
 
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={uploading || (uploadMode === 'file' && !selectedFile)}
           className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 text-white font-bold shadow-md shadow-blue-600/30 transition-all mt-4 flex items-center justify-center gap-2"
         >

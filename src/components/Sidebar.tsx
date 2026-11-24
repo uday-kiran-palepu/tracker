@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import {
   LayoutDashboard, FolderKanban, MapPin, Activity, BarChart3,
-  FileCheck2, FolderOpen, Settings, LogOut, ShieldCheck, UserCircle, Menu, X, Home
+  FileCheck2, FolderOpen, Settings, LogOut, ShieldCheck, UserCircle, Menu, X, Home, LogIn
 } from 'lucide-react';
 import { User } from '../types';
 
@@ -51,11 +51,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [mobileOpen, setMobileOpen]);
 
   const content = (
-    <div className="flex flex-col h-full bg-[#0B1528] text-slate-300 w-64 select-none">
+    <div className="flex flex-col h-full bg-[#0B1528] text-slate-300 w-full select-none">
       {/* Brand Header (Clicking returns to landing homepage) */}
       <div
         onClick={onReturnHome}
-        className="flex items-center gap-3 px-6 py-6 border-b border-slate-800 cursor-pointer hover:bg-slate-900/60 transition-colors group"
+        className="shrink-0 flex items-center gap-3 px-6 py-6 border-b border-slate-800 cursor-pointer hover:bg-slate-900/60 transition-colors group"
         title="Return to Landing Homepage"
       >
         <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-600/30 group-hover:scale-105 transition-transform">
@@ -107,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* User / Coordinator Profile Footer */}
-      <div className="p-4 border-t border-slate-800 bg-[#070e1c]">
+      <div className="shrink-0 p-4 border-t border-slate-800 bg-[#070e1c]">
         {/* Mobile session banner */}
         <div className="mb-2.5">
           <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">
@@ -172,8 +172,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:block shrink-0 border-r border-slate-800 h-screen sticky top-0 z-40">
+      {/* Desktop Sidebar: full-viewport height with zero white gaps underneath */}
+      <aside className="hidden lg:flex lg:flex-col w-64 shrink-0 h-full border-r border-slate-800 bg-[#0B1528] z-40">
         {content}
       </aside>
 

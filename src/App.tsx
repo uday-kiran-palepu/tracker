@@ -19,6 +19,7 @@ import {
   AddManpowerModal, EditManpowerModal
 } from './components/Modals';
 import { Building2, RefreshCw, MessageCircle } from 'lucide-react';
+import { sanitizeWhatsAppUrl } from './utils/security';
 
 import {
   Project, ExecutionStageItem, MaterialItem, ManpowerItem, ApprovalItem,
@@ -695,7 +696,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC] font-sans text-slate-900 selection:bg-blue-600 selection:text-white overflow-x-hidden w-full max-w-full">
+    <div className="flex h-screen w-screen bg-[#F8FAFC] font-sans text-slate-900 selection:bg-blue-600 selection:text-white overflow-hidden">
       {/* Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -712,8 +713,8 @@ export default function App() {
         onReturnHome={() => setShowLanding(true)}
       />
 
-      {/* Main Content Canvas */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden w-full">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         <Header
           currentUser={currentUser}
           onOpenLogin={() => setLoginModalOpen(true)}
@@ -727,7 +728,8 @@ export default function App() {
           onReturnHome={() => setShowLanding(true)}
         />
 
-        <main className="flex-1 p-3.5 sm:p-5 md:p-6 lg:p-8 max-w-7xl w-full mx-auto min-w-0 overflow-x-hidden">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-5 md:p-6 lg:p-8">
+          <div className="max-w-7xl w-full mx-auto min-w-0">
           {selectedProject ? (
             <ProjectDetailView
               project={selectedProject}
@@ -875,6 +877,7 @@ export default function App() {
               )}
             </>
           )}
+          </div>
         </main>
       </div>
 
@@ -993,7 +996,7 @@ export default function App() {
 
       {/* Global Floating WhatsApp Support Button Across All Pages */}
       <a
-        href={`https://wa.me/${String(appSettings?.whatsappNumber || '919876543210').replace(/\D/g, '')}`}
+        href={sanitizeWhatsAppUrl(appSettings?.whatsappNumber || '919876543210')}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Contact support on WhatsApp"

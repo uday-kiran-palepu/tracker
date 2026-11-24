@@ -28,7 +28,11 @@ export const KNOWN_CITY_COORDINATES: Record<string, { lat: number; lng: number }
   'vizag': { lat: 17.6868, lng: 83.2185 },
   'vijayawada': { lat: 16.5062, lng: 80.6480 },
   'guntur': { lat: 16.3067, lng: 80.4365 },
+  'guntur-vijayawada': { lat: 16.4300, lng: 80.5500 },
+  'guntur vijayawada': { lat: 16.4300, lng: 80.5500 },
   'tirupati': { lat: 13.6288, lng: 79.4192 },
+  'rajampet': { lat: 14.1954, lng: 79.1583 },
+  'rajampeta': { lat: 14.1954, lng: 79.1583 },
   'rajahmundry': { lat: 17.0005, lng: 81.8040 },
   'kakinada': { lat: 16.9891, lng: 82.2475 },
   'nellore': { lat: 14.4426, lng: 79.9865 },
@@ -245,7 +249,8 @@ export function geocodeCity(cityName: string, stateName?: string): { lat: number
     if (cleanState.includes('gujarat')) return KNOWN_CITY_COORDINATES['ahmedabad'];
   }
 
-  return null;
+  // 4. Default India center fallback so NO project is ever dropped
+  return { lat: 17.0, lng: 80.0 };
 }
 
 /**
@@ -279,8 +284,8 @@ export function resolveProjectCoordinates(params: {
     if (isShortMapsUrl(rawMapsUrl)) {
       const cityCoords = geocodeCity(city, state);
       return {
-        lat: cityCoords ? cityCoords.lat : (params.currentLat || 17.3850),
-        lng: cityCoords ? cityCoords.lng : (params.currentLng || 78.4867),
+        lat: cityCoords ? cityCoords.lat : (params.currentLat || 17.0),
+        lng: cityCoords ? cityCoords.lng : (params.currentLng || 80.0),
         mapsUrl: rawMapsUrl,
         source: 'mapsUrl'
       };
@@ -299,13 +304,13 @@ export function resolveProjectCoordinates(params: {
     };
   }
 
-  // Fallback to current coordinates or default hub (Hyderabad)
+  // Fallback to current coordinates or default India center [17.0, 80.0]
   const fallbackLat = isValidLatLng(Number(params.currentLat), Number(params.currentLng))
     ? Number(params.currentLat)
-    : 17.3850;
+    : 17.0;
   const fallbackLng = isValidLatLng(Number(params.currentLat), Number(params.currentLng))
     ? Number(params.currentLng)
-    : 78.4867;
+    : 80.0;
 
   return {
     lat: fallbackLat,
@@ -313,4 +318,115 @@ export function resolveProjectCoordinates(params: {
     mapsUrl: rawMapsUrl || `https://www.google.com/maps?q=${fallbackLat},${fallbackLng}`,
     source: 'default'
   };
+}
+
+export interface PlottedProjectPin<T = any> {
+  project: T;
+  baseLat: number;
+  baseLng: number;
+  lat: number;
+  lng: number;
+  isOffset: boolean;
+  clusterSize: number;
+}
+
+/**
+ * Ensures EVERY project is mapped with valid coordinates and de-overlaps pins
+ * that share identical or close coordinates (within 0.01 deg) by arranging them
+ * in a neat circular offset (radius ~ 0.06 deg / ~6.6km).
+ */
+export function deOverlapProjectPins<T extends { lat?: number | string; lng?: number | string; mapsUrl?: string; city?: string; state?: string }>(
+  projects: T[],
+  offsetRadius: number = 0.06
+): PlottedProjectPin<T>[] {
+  // Step 1: Assign valid base coordinates to every single project (zero drops)
+  const assigned = projects.map((proj) => {
+    let lat = Number(proj.lat);
+    let lng = Number(proj.lng);
+
+    // Priority 1: Check existing lat/lng or parse mapsUrl
+    if (!isValidLatLng(lat, lng) && proj.mapsUrl) {
+      const extracted = extractCoordsFromMapsUrl(proj.mapsUrl);
+      if (extracted) {
+        lat = extracted.lat;
+        lng = extracted.lng;
+      }
+    }
+
+    // Priority 2: City / state geocode fallback
+    if (!isValidLatLng(lat, lng)) {
+      const geocoded = geocodeCity(proj.city || '', proj.state);
+      if (geocoded) {
+        lat = geocoded.lat;
+        lng = geocoded.lng;
+      } else {
+        // Default India center fallback [17.0, 80.0]
+        lat = 17.0;
+        lng = 80.0;
+      }
+    }
+
+    return { project: proj, baseLat: lat, baseLng: lng };
+  });
+
+  // Step 2: Group into clusters of points within 0.01 degrees of each other
+  const clusters: { centerLat: number; centerLng: number; items: typeof assigned }[] = [];
+
+  for (const item of assigned) {
+    let matchedCluster: typeof clusters[0] | null = null;
+    for (const cluster of clusters) {
+      const dist = Math.hypot(item.baseLat - cluster.centerLat, item.baseLng - cluster.centerLng);
+      if (dist <= 0.01) {
+        matchedCluster = cluster;
+        break;
+      }
+    }
+
+    if (matchedCluster) {
+      matchedCluster.items.push(item);
+    } else {
+      clusters.push({
+        centerLat: item.baseLat,
+        centerLng: item.baseLng,
+        items: [item]
+      });
+    }
+  }
+
+  // Step 3: De-overlap clusters with multiple pins using a circular offset
+  const result: PlottedProjectPin<T>[] = [];
+
+  for (const cluster of clusters) {
+    const count = cluster.items.length;
+    if (count === 1) {
+      result.push({
+        project: cluster.items[0].project,
+        baseLat: cluster.items[0].baseLat,
+        baseLng: cluster.items[0].baseLng,
+        lat: cluster.items[0].baseLat,
+        lng: cluster.items[0].baseLng,
+        isOffset: false,
+        clusterSize: 1
+      });
+    } else {
+      // Multiple projects at the exact same or very close coordinates:
+      // Offset them evenly around a circle
+      cluster.items.forEach((item, idx) => {
+        const angle = (2 * Math.PI * idx) / count - Math.PI / 2; // start from top (12 o'clock)
+        const offsetLat = cluster.centerLat + offsetRadius * Math.sin(angle);
+        const offsetLng = cluster.centerLng + offsetRadius * Math.cos(angle);
+        result.push({
+          project: item.project,
+          baseLat: item.baseLat,
+          baseLng: item.baseLng,
+          lat: offsetLat,
+          lng: offsetLng,
+          isOffset: true,
+          clusterSize: count
+        });
+      });
+    }
+  }
+
+  return result;
 }

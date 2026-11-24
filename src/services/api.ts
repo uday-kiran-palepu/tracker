@@ -1,5 +1,5 @@
-import { 
-  Project, DayWiseReport, DayWisePhoto, ExecutionStageItem, 
+import {
+  Project, DayWiseReport, DayWisePhoto, ExecutionStageItem,
   MaterialItem, ManpowerItem, ApprovalItem, DocumentItem, User, AllDataResponse, AppSettings, DatabaseMeta,
   StagePhoto, StageType
 } from '../types';
@@ -105,7 +105,7 @@ export const api = {
           };
         }
       }
-    } catch (e) {}
+    } catch (e) { }
     const live = this.getLiveCache();
     if (live?.AppSettings) {
       return {
@@ -132,7 +132,7 @@ export const api = {
       if (normalized.appName) {
         this.setAppName(normalized.appName);
       }
-    } catch (e) {}
+    } catch (e) { }
   },
 
   getAppName(): string {
@@ -251,7 +251,7 @@ export const api = {
    */
   async fetchAllData(options?: { fresh?: boolean }): Promise<AllDataResponse> {
     const fetchUrl = options?.fresh ? `${PERMANENT_DB_URL}?fresh=1` : PERMANENT_DB_URL;
-    const response = await fetch(fetchUrl, { 
+    const response = await fetch(fetchUrl, {
       method: 'GET',
       redirect: 'follow'
     });
@@ -279,11 +279,11 @@ export const api = {
 
       const normalizedData: AllDataResponse = {
         Projects: (d.Projects || []).map((p: any) => {
-          const bAlloc = p.budgetAllocated !== undefined && p.budgetAllocated !== '' 
-            ? Number(p.budgetAllocated) 
+          const bAlloc = p.budgetAllocated !== undefined && p.budgetAllocated !== ''
+            ? Number(p.budgetAllocated)
             : (p.budget ? (parseFloat(String(p.budget).replace(/[^0-9.]/g, '')) * 10000000 || 24000000) : 25000000);
-          const bSpent = p.budgetSpent !== undefined && p.budgetSpent !== '' 
-            ? Number(p.budgetSpent) 
+          const bSpent = p.budgetSpent !== undefined && p.budgetSpent !== ''
+            ? Number(p.budgetSpent)
             : (p.spent ? (parseFloat(String(p.spent).replace(/[^0-9.]/g, '')) * 10000000 || 17200000) : 15000000);
 
           const formattedStart = formatDate(p.startDate, 'input') || '2026-01-15';
@@ -695,14 +695,14 @@ export const api = {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.STAGE_PHOTOS);
       if (raw) return JSON.parse(raw);
-    } catch (e) {}
+    } catch (e) { }
     return [];
   },
 
   setLocalStagePhotos(photos: StagePhoto[]) {
     try {
       localStorage.setItem(STORAGE_KEYS.STAGE_PHOTOS, JSON.stringify(photos));
-    } catch (e) {}
+    } catch (e) { }
   },
 
   async uploadStagePhoto(payload: UploadStagePhotoPayload): Promise<{ status: string; data?: StagePhoto; message?: string }> {

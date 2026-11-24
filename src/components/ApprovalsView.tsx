@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FileCheck2, Plus, ExternalLink, ShieldCheck, Filter, Trash2 } from 'lucide-react';
 import { ApprovalItem, User } from '../types';
 import { formatDate } from '../utils/date';
+import { sanitizeExternalUrl } from '../utils/security';
 
 interface ApprovalsViewProps {
   approvals: ApprovalItem[];
@@ -118,9 +119,9 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <a
-                          href={app.documentUrl || app.link}
+                          href={sanitizeExternalUrl(app.documentUrl || app.link)}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold text-xs transition-all whitespace-nowrap shrink-0"
                         >
                           <span>View Doc</span>

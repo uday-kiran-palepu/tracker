@@ -62,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200">
+    <header className="shrink-0 sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200">
       {/* MOBILE COMPACT HEADER (< md): Sleek single-row bar shrinking mobile vertical height by ~50% */}
       <div className="flex md:hidden items-center justify-between h-12 sm:h-14 px-3 sm:px-4">
         {/* Left: Hamburger Menu + Compact App Name */}

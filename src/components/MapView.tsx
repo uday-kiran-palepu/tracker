@@ -5,6 +5,8 @@ import {
   Clock, Activity, ExternalLink, Globe, Compass 
 } from 'lucide-react';
 import { Project } from '../types';
+import { deOverlapProjectPins } from '../utils/location';
+import { sanitizeExternalUrl } from '../utils/security';
 
 interface MapViewProps {
   projects: Project[];
@@ -134,7 +136,12 @@ export const MapView: React.FC<MapViewProps> = ({ projects, onSelectProject }) =
     tileLayerRef.current = newLayer;
   }, [tileMode]);
 
-  // Update Markers and Auto-fit Bounds when filteredProjects change
+  // Calculate de-overlapped pins for ALL projects (Priority coords + Circular offset for close pins)
+  const plottedPins = useMemo(() => {
+    return deOverlapProjectPins(filteredProjects, 0.06);
+  }, [filteredProjects]);
+
+  // Update Markers and Auto-fit Bounds when plottedPins or activeMarkerId change
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current) return;
 
@@ -142,17 +149,20 @@ export const MapView: React.FC<MapViewProps> = ({ projects, onSelectProject }) =
 
     const bounds = L.latLngBounds([]);
 
-    filteredProjects.forEach(proj => {
-      const lat = Number(proj.lat);
-      const lng = Number(proj.lng);
-      if (isNaN(lat) || isNaN(lng)) return;
+    plottedPins.forEach(pin => {
+      const proj = pin.project;
+      const lat = pin.lat;
+      const lng = pin.lng;
 
       bounds.extend([lat, lng]);
 
       const color = getStatusColor(proj.status);
       const isSelected = proj.id === activeMarkerId;
       const labCode = proj.labCode || proj.code || proj.id;
-      const mapsUrl = proj.mapsUrl && proj.mapsUrl.trim() ? proj.mapsUrl.trim() : `https://www.google.com/maps?q=${lat},${lng}`;
+      const rawMapsUrl = proj.mapsUrl && proj.mapsUrl.trim()
+        ? proj.mapsUrl.trim()
+        : `https://www.google.com/maps?q=${pin.baseLat},${pin.baseLng}`;
+      const safeMapsUrl = sanitizeExternalUrl(rawMapsUrl);
 
       const markerHtml = `
         <div style="
@@ -195,7 +205,7 @@ export const MapView: React.FC<MapViewProps> = ({ projects, onSelectProject }) =
             ${proj.name}
           </div>
           <div style="font-size: 11px; color: #64748B; margin-top: 2px;">
-            📍 ${proj.city}, ${proj.state}
+            📍 ${proj.city}, ${proj.state} ${pin.clusterSize > 1 ? `<span style="color:#2563EB; font-weight:700;">(${pin.clusterSize} in ${proj.city})</span>` : ''}
           </div>
           <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
             <span style="font-weight: 700; color: ${color};">${proj.status}</span>
@@ -208,7 +218,7 @@ export const MapView: React.FC<MapViewProps> = ({ projects, onSelectProject }) =
             ">
               Open Project Details →
             </button>
-            <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" style="
+            <a href="${safeMapsUrl}" target="_blank" rel="noopener noreferrer" style="
               text-align: center; font-size: 10px; font-weight: 600; color: #2563EB; text-decoration: none; padding: 2px;
             ">
               Open in Google Maps ↗
@@ -238,24 +248,29 @@ export const MapView: React.FC<MapViewProps> = ({ projects, onSelectProject }) =
     });
 
     // Auto-fit bounds if we have plotted points
-    if (bounds.isValid() && filteredProjects.length > 0) {
-      if (filteredProjects.length === 1) {
+    if (bounds.isValid() && plottedPins.length > 0) {
+      if (plottedPins.length === 1) {
         mapInstanceRef.current.setView(bounds.getCenter(), 10, { animate: true });
       } else {
         mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
       }
     }
-  }, [filteredProjects, activeMarkerId]);
+  }, [plottedPins, activeMarkerId]);
 
   // If city is selected, zoom into it
   useEffect(() => {
     if (selectedCity && mapInstanceRef.current) {
-      const cityProj = filteredProjects.find(p => p.city === selectedCity);
-      if (cityProj) {
-        mapInstanceRef.current.setView([cityProj.lat, cityProj.lng], 9, { animate: true });
+      const cityPins = plottedPins.filter(p => p.project.city === selectedCity);
+      if (cityPins.length > 0) {
+        if (cityPins.length === 1) {
+          mapInstanceRef.current.setView([cityPins[0].lat, cityPins[0].lng], 10, { animate: true });
+        } else {
+          const cityBounds = L.latLngBounds(cityPins.map(p => [p.lat, p.lng]));
+          mapInstanceRef.current.fitBounds(cityBounds, { padding: [40, 40], maxZoom: 11 });
+        }
       }
     }
-  }, [selectedCity]);
+  }, [selectedCity, plottedPins]);
 
   return (
     <div className="space-y-6">
@@ -406,7 +421,11 @@ export const MapView: React.FC<MapViewProps> = ({ projects, onSelectProject }) =
                 </button>
 
                 <a
-                  href={selectedProj.mapsUrl && selectedProj.mapsUrl.trim() ? selectedProj.mapsUrl.trim() : `https://www.google.com/maps?q=${selectedProj.lat},${selectedProj.lng}`}
+                  href={sanitizeExternalUrl(
+                    selectedProj.mapsUrl && selectedProj.mapsUrl.trim()
+                      ? selectedProj.mapsUrl.trim()
+                      : `https://www.google.com/maps?q=${selectedProj.lat},${selectedProj.lng}`
+                  )}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-all flex items-center justify-center gap-1.5 border border-slate-200"

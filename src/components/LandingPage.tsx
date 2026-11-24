@@ -4,6 +4,7 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { Project, AppSettings } from '../types';
+import { sanitizeExternalUrl } from '../utils/security';
 
 interface LandingPageProps {
   appName: string;
@@ -24,8 +25,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenLogin,
   onOpenMap
 }) => {
-  // Video source: AppSettings configuration or default local landscape hero video
-  const videoSrc = (appSettings?.heroVideoUrl ? String(appSettings.heroVideoUrl).trim() : '') || '/hero-video.mp4';
+  // Video source: AppSettings configuration or default local landscape hero video (safely sanitized)
+  const rawVideo = (appSettings?.heroVideoUrl ? String(appSettings.heroVideoUrl).trim() : '') || '/hero-video.mp4';
+  const videoSrc = sanitizeExternalUrl(rawVideo, '/hero-video.mp4');
   const cleanWhatsApp = String(appSettings?.whatsappNumber ?? '').replace(/\D/g, '');
 
   const totalArea = projects.reduce((acc, curr) => acc + (Number(curr.areaSft) || 0), 0);
