@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ArrowLeft, MapPin, Calendar, Users, FileText, ImageIcon,
+  ArrowLeft, ArrowRight, MapPin, Calendar, Users, FileText, ImageIcon,
   Layers, Package, CheckCircle2, Clock, Plus, ExternalLink, Trash2,
   ShieldCheck, AlertCircle, Building2, ChevronLeft, ChevronRight, X, Sparkles,
   AlertTriangle, DollarSign, Wallet, TrendingUp, Edit3, Upload, Phone, PhoneCall,
@@ -162,6 +162,13 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
 
   const heroImg = project.heroImageUrl || project.heroImage || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80';
 
+  const completedStagesCount = projStages.filter(s => s.status === 'Completed' || (s.progress ?? 0) === 100).length;
+  const mapsHref = project.mapsUrl
+    ? sanitizeExternalUrl(project.mapsUrl)
+    : (project.lat && project.lng
+        ? `https://www.google.com/maps?q=${project.lat},${project.lng}`
+        : `https://www.google.com/maps?q=${encodeURIComponent(`${project.name} ${project.city || ''}`)}`);
+
   // Lightbox navigation
   const handlePrevPhoto = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -265,11 +272,11 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
       {/* SUB-TAB 1: OVERVIEW */}
       {activeSubTab === 'overview' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left 2 cols: Hero Image & Project Summary */}
-            <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
-                <div className="h-64 sm:h-80 relative">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            {/* Left Column (lg:col-span-2 flex flex-col gap-6): Hero Image & Campus Details */}
+            <div className="lg:col-span-2 flex flex-col gap-6">
+              <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm shrink-0">
+                <div className="h-64 sm:h-72 relative">
                   <img
                     src={getReliableImageUrl(heroImg)}
                     alt=""
@@ -286,11 +293,108 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Campus Details & Quick Actions Card */}
+              <div className="flex-1 flex flex-col justify-between bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-blue-600" />
+                      <h3 className="text-base font-bold text-slate-900">Campus Details & Quick Actions</h3>
+                    </div>
+                    <span className="text-[11px] font-semibold text-slate-400">Campus Metadata</span>
+                  </div>
+
+                  {/* Metadata Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-center">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Lab Code</span>
+                      <span className="font-mono font-bold text-xs text-slate-800">{project.labCode || project.code || 'N/A'}</span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-center">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Location</span>
+                      <span className="font-bold text-xs text-slate-800 truncate" title={`${project.city || ''}${project.state ? `, ${project.state}` : ''}`}>
+                        {project.city || 'N/A'}{project.state ? `, ${project.state}` : ''}
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-center">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Built-up Area</span>
+                      <span className="font-bold text-xs text-slate-800">{Number(project.areaSft || 0).toLocaleString()} sft</span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-center">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Execution Stages</span>
+                      <span className="font-bold text-xs text-blue-600">
+                        {completedStagesCount} / {projStages.length || 21} Completed
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-center">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Status</span>
+                      <div>
+                        <span className={`inline-flex items-center text-[10px] font-bold px-2.5 py-0.5 rounded-full text-white ${
+                          project.status === 'Active' ? 'bg-blue-600' :
+                          project.status === 'In Design' ? 'bg-purple-600' :
+                          project.status === 'In Execution' ? 'bg-amber-600' : 'bg-emerald-600'
+                        }`}>
+                          {project.status || 'Active'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-center">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Health</span>
+                      <div>
+                        <span className={`inline-flex items-center text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                          project.health === 'On Track' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                          project.health === 'At Risk' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
+                          'bg-rose-50 text-rose-600 border border-rose-200'
+                        }`}>
+                          {project.health || 'On Track'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer row inside the card */}
+                <div className="pt-4 mt-4 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  {mapsHref ? (
+                    <a
+                      href={mapsHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 transition-all hover:text-blue-600"
+                    >
+                      <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
+                      <span>Open in Google Maps</span>
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    </a>
+                  ) : (
+                    <span className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-50 text-slate-400 text-xs font-medium border border-slate-100">
+                      <MapPin className="w-4 h-4 text-slate-300 shrink-0" />
+                      <span>No Location Coordinates</span>
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('execution')}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition-all"
+                  >
+                    <Layers className="w-4 h-4 shrink-0" />
+                    <span>View Execution Stages</span>
+                    <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {/* Right col: Project Progress Card & Executive POC */}
-            <div className="space-y-6">
-              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+            {/* Right Column (lg:col-span-1 flex flex-col gap-6): Project Progress Card & Executive POC */}
+            <div className="lg:col-span-1 flex flex-col gap-6">
+              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm shrink-0">
                 <h3 className="text-base font-bold text-slate-900 mb-4">Project Progress Card</h3>
                 <div className="text-center py-4 bg-slate-50 rounded-2xl border border-slate-100">
                   <span className="text-4xl font-black text-blue-600">{project.progress}%</span>
@@ -318,7 +422,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
               </div>
 
               {/* NxtWave Executive POC Card */}
-              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mt-auto">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-base font-bold text-slate-900">NxtWave Executive POC</h3>
                   <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
