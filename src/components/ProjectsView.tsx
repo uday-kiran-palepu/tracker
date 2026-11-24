@@ -102,9 +102,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           />
         </div>
 
-        {/* Status Filter */}
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+        {/* Status & Health Filters */}
+        <div className="grid grid-cols-2 gap-2 w-full md:flex md:items-center md:w-auto">
           <select
             value={selectedStatusFilter}
             onChange={(e) => setSelectedStatusFilter(e.target.value)}

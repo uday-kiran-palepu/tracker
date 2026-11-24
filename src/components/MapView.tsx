@@ -152,7 +152,7 @@ export const MapView: React.FC<MapViewProps> = ({ projects, onSelectProject }) =
       const color = getStatusColor(proj.status);
       const isSelected = proj.id === activeMarkerId;
       const labCode = proj.labCode || proj.code || proj.id;
-      const mapsUrl = proj.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+      const mapsUrl = proj.mapsUrl && proj.mapsUrl.trim() ? proj.mapsUrl.trim() : `https://www.google.com/maps?q=${lat},${lng}`;
 
       const markerHtml = `
         <div style="
@@ -328,9 +328,9 @@ export const MapView: React.FC<MapViewProps> = ({ projects, onSelectProject }) =
       </div>
 
       {/* Google-Style Legend Bar */}
-      <div className="bg-white px-6 py-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4 text-xs font-semibold text-slate-700">
+      <div className="bg-white px-4 sm:px-6 py-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs font-semibold text-slate-700">
         <span className="text-slate-400 uppercase tracking-wider text-[10px]">Campus Status Pin Legend:</span>
-        <div className="flex items-center gap-6 flex-wrap">
+        <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 inline-block shadow-sm" />
             <span>Green = Active</span>
@@ -353,12 +353,12 @@ export const MapView: React.FC<MapViewProps> = ({ projects, onSelectProject }) =
       {/* Map + Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Interactive Map Container */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-[580px] relative">
+        <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-[420px] sm:h-[500px] md:h-[580px] relative">
           <div ref={mapContainerRef} className="w-full h-full z-10" />
 
           {/* Floating Selected Project Card Overlay */}
           {selectedProj && (
-            <div className="absolute top-4 right-4 z-20 bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-slate-200 max-w-xs animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="absolute top-3 left-3 right-3 sm:left-auto sm:right-4 z-20 bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-slate-200 max-w-xs animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider font-mono">
@@ -406,7 +406,7 @@ export const MapView: React.FC<MapViewProps> = ({ projects, onSelectProject }) =
                 </button>
 
                 <a
-                  href={selectedProj.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${selectedProj.lat},${selectedProj.lng}`}
+                  href={selectedProj.mapsUrl && selectedProj.mapsUrl.trim() ? selectedProj.mapsUrl.trim() : `https://www.google.com/maps?q=${selectedProj.lat},${selectedProj.lng}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-all flex items-center justify-center gap-1.5 border border-slate-200"

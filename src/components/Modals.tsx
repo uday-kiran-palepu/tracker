@@ -11,6 +11,7 @@ import { APPS_SCRIPT_CODE } from '../data/appsScriptCode';
 import { compressImageToBase64 } from '../utils/image';
 import { formatDateInput } from '../utils/date';
 import { api } from '../services/api';
+import { resolveProjectCoordinates, extractCoordsFromMapsUrl, geocodeCity } from '../utils/location';
 
 interface ModalBaseProps {
   isOpen: boolean;
@@ -297,9 +298,57 @@ export const AddProjectModal: React.FC<{
   const [furnitureProgress, setFurnitureProgress] = useState(10);
   const [brandingProgress, setBrandingProgress] = useState(15);
 
+  // Priority-based location synchronization
+  const handleCityChange = (newCity: string) => {
+    setCity(newCity);
+    if (!mapsUrl.trim()) {
+      const coords = geocodeCity(newCity, state);
+      if (coords) {
+        setLat(coords.lat);
+        setLng(coords.lng);
+      }
+    }
+  };
+
+  const handleStateChange = (newState: string) => {
+    setState(newState);
+    if (!mapsUrl.trim()) {
+      const coords = geocodeCity(city, newState);
+      if (coords) {
+        setLat(coords.lat);
+        setLng(coords.lng);
+      }
+    }
+  };
+
+  const handleMapsUrlChange = (newUrl: string) => {
+    setMapsUrl(newUrl);
+    // Priority 1: Extract coordinates from Maps link if valid
+    const extracted = extractCoordsFromMapsUrl(newUrl);
+    if (extracted) {
+      setLat(extracted.lat);
+      setLng(extracted.lng);
+    } else if (!newUrl.trim()) {
+      // Fallback to Priority 2: City geocoding if mapsUrl is cleared
+      const coords = geocodeCity(city, state);
+      if (coords) {
+        setLat(coords.lat);
+        setLng(coords.lng);
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanCode = labCode.trim() || name.slice(0, 3).toUpperCase() + '-' + Math.floor(Math.random() * 90 + 10);
+    const resolvedCoords = resolveProjectCoordinates({
+      mapsUrl,
+      city,
+      state,
+      currentLat: Number(lat),
+      currentLng: Number(lng)
+    });
+
     const newProj: Project = {
       id: `proj-${Date.now()}`,
       name,
@@ -316,9 +365,9 @@ export const AddProjectModal: React.FC<{
       targetHandover: formatDateInput(targetDate),
       heroImageUrl,
       heroImage: heroImageUrl,
-      lat: Number(lat),
-      lng: Number(lng),
-      mapsUrl: mapsUrl.trim() || `https://www.google.com/maps/search/?api=1&query=${Number(lat)},${Number(lng)}`,
+      lat: resolvedCoords.lat,
+      lng: resolvedCoords.lng,
+      mapsUrl: resolvedCoords.mapsUrl,
       pocName,
       pocPhone,
       budgetAllocated: Number(budgetAllocated),
@@ -359,11 +408,11 @@ export const AddProjectModal: React.FC<{
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block font-semibold text-slate-700 mb-1">City</label>
-            <input type="text" value={city} onChange={e => setCity(e.target.value)} required className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200" />
+            <input type="text" value={city} onChange={e => handleCityChange(e.target.value)} required className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200" />
           </div>
           <div>
             <label className="block font-semibold text-slate-700 mb-1">State</label>
-            <input type="text" value={state} onChange={e => setState(e.target.value)} required className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200" />
+            <input type="text" value={state} onChange={e => handleStateChange(e.target.value)} required className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200" />
           </div>
         </div>
 
@@ -443,7 +492,7 @@ export const AddProjectModal: React.FC<{
           </div>
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Google Maps URL</label>
-            <input type="url" value={mapsUrl} onChange={e => setMapsUrl(e.target.value)} placeholder="https://maps.google.com/?q=..." className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200" />
+            <input type="url" value={mapsUrl} onChange={e => handleMapsUrlChange(e.target.value)} placeholder="https://maps.google.com/?q=..." className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200" />
           </div>
         </div>
 
@@ -512,9 +561,57 @@ export const EditProjectModal: React.FC<{
   const [brandingProgress, setBrandingProgress] = useState(project.brandingProgress ?? 0);
   const [heroImageUrl, setHeroImageUrl] = useState(project.heroImageUrl || project.heroImage || '');
 
+  // Priority-based location synchronization
+  const handleCityChange = (newCity: string) => {
+    setCity(newCity);
+    if (!mapsUrl.trim()) {
+      const coords = geocodeCity(newCity, state);
+      if (coords) {
+        setLat(coords.lat);
+        setLng(coords.lng);
+      }
+    }
+  };
+
+  const handleStateChange = (newState: string) => {
+    setState(newState);
+    if (!mapsUrl.trim()) {
+      const coords = geocodeCity(city, newState);
+      if (coords) {
+        setLat(coords.lat);
+        setLng(coords.lng);
+      }
+    }
+  };
+
+  const handleMapsUrlChange = (newUrl: string) => {
+    setMapsUrl(newUrl);
+    // Priority 1: Extract coordinates from Maps link if valid
+    const extracted = extractCoordsFromMapsUrl(newUrl);
+    if (extracted) {
+      setLat(extracted.lat);
+      setLng(extracted.lng);
+    } else if (!newUrl.trim()) {
+      // Fallback to Priority 2: City geocoding if mapsUrl is cleared
+      const coords = geocodeCity(city, state);
+      if (coords) {
+        setLat(coords.lat);
+        setLng(coords.lng);
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanCode = labCode.trim() || project.code || project.id;
+    const resolvedCoords = resolveProjectCoordinates({
+      mapsUrl,
+      city,
+      state,
+      currentLat: Number(lat),
+      currentLng: Number(lng)
+    });
+
     const updated: Project = {
       ...project,
       name,
@@ -531,9 +628,9 @@ export const EditProjectModal: React.FC<{
       targetHandover: formatDateInput(targetDate),
       budgetAllocated: Number(budgetAllocated),
       budgetSpent: Number(budgetSpent),
-      lat: Number(lat),
-      lng: Number(lng),
-      mapsUrl: mapsUrl.trim() || `https://www.google.com/maps/search/?api=1&query=${Number(lat)},${Number(lng)}`,
+      lat: resolvedCoords.lat,
+      lng: resolvedCoords.lng,
+      mapsUrl: resolvedCoords.mapsUrl,
       pocName,
       pocPhone,
       heroImageUrl,
@@ -572,11 +669,11 @@ export const EditProjectModal: React.FC<{
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block font-semibold text-slate-700 mb-1">City</label>
-            <input type="text" value={city} onChange={e => setCity(e.target.value)} required className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200" />
+            <input type="text" value={city} onChange={e => handleCityChange(e.target.value)} required className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200" />
           </div>
           <div>
             <label className="block font-semibold text-slate-700 mb-1">State</label>
-            <input type="text" value={state} onChange={e => setState(e.target.value)} required className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200" />
+            <input type="text" value={state} onChange={e => handleStateChange(e.target.value)} required className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200" />
           </div>
         </div>
 
@@ -656,7 +753,7 @@ export const EditProjectModal: React.FC<{
           </div>
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Google Maps URL</label>
-            <input type="url" value={mapsUrl} onChange={e => setMapsUrl(e.target.value)} placeholder="https://maps.google.com/?q=..." className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200" />
+            <input type="url" value={mapsUrl} onChange={e => handleMapsUrlChange(e.target.value)} placeholder="https://maps.google.com/?q=..." className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200" />
           </div>
         </div>
 

@@ -269,7 +269,21 @@ export default function App() {
     showToast('info', 'Saving campus & 21 execution stages to Database...', 'Adding Project');
 
     try {
-      await api.createRecord('Projects', newProj);
+      const res = await api.createRecord('Projects', newProj);
+      // Immediately update with server's resolved coordinates and attributes
+      if (res && res.data) {
+        const serverData = res.data;
+        setProjects(prev => prev.map(p => p.id === newProj.id ? {
+          ...p,
+          ...serverData,
+          lat: Number(serverData.lat) || p.lat,
+          lng: Number(serverData.lng) || p.lng,
+          mapsUrl: serverData.mapsUrl || p.mapsUrl,
+          city: serverData.city || p.city,
+          state: serverData.state || p.state
+        } : p));
+      }
+
       // Asynchronously sync all 21 execution stages
       for (const st of defaultStages) {
         api.createRecord('ExecutionStages', st).catch(e => console.warn('Stage auto-sync error:', e));
@@ -325,7 +339,24 @@ export default function App() {
     showToast('info', 'Updating project in Database...', 'Saving Changes');
 
     try {
-      await api.updateRecord('Projects', updatedProj.id, updatedProj);
+      const res = await api.updateRecord('Projects', updatedProj.id, updatedProj);
+      // Immediately update state with server's returned data (including resolved lat, lng, mapsUrl)
+      if (res && (res as any).data) {
+        const serverData = (res as any).data;
+        const mergedProj: Project = {
+          ...updatedProj,
+          ...serverData,
+          lat: Number(serverData.lat) || updatedProj.lat,
+          lng: Number(serverData.lng) || updatedProj.lng,
+          mapsUrl: serverData.mapsUrl || updatedProj.mapsUrl,
+          city: serverData.city || updatedProj.city,
+          state: serverData.state || updatedProj.state
+        };
+        setProjects(prev => prev.map(p => p.id === updatedProj.id ? mergedProj : p));
+        if (selectedProject?.id === updatedProj.id) {
+          setSelectedProject(mergedProj);
+        }
+      }
       showToast('success', `Campus "${updatedProj.name}" updated successfully!`, 'Saved to Database');
       syncData({ isSilent: true, fresh: true });
     } catch (e: any) {
@@ -664,7 +695,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC] font-sans text-slate-900 selection:bg-blue-600 selection:text-white">
+    <div className="flex min-h-screen bg-[#F8FAFC] font-sans text-slate-900 selection:bg-blue-600 selection:text-white overflow-x-hidden w-full max-w-full">
       {/* Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -682,7 +713,7 @@ export default function App() {
       />
 
       {/* Main Content Canvas */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden w-full">
         <Header
           currentUser={currentUser}
           onOpenLogin={() => setLoginModalOpen(true)}
@@ -696,7 +727,7 @@ export default function App() {
           onReturnHome={() => setShowLanding(true)}
         />
 
-        <main className="flex-1 p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-3.5 sm:p-5 md:p-6 lg:p-8 max-w-7xl w-full mx-auto min-w-0 overflow-x-hidden">
           {selectedProject ? (
             <ProjectDetailView
               project={selectedProject}

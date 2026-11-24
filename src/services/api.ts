@@ -5,6 +5,7 @@ import {
 } from '../types';
 import { formatDate } from '../utils/date';
 import { INITIAL_USERS } from '../data/seedData';
+import { resolveProjectCoordinates } from '../utils/location';
 
 export const PERMANENT_DB_URL = "https://script.google.com/macros/s/AKfycbyZvYQnOg0eMvh8PUgCI2vCUL8kmfvb8rSlu0ASMtdwiDa7e5YNcFomf4vadDP8HNMfCg/exec";
 
@@ -288,15 +289,23 @@ export const api = {
           const formattedStart = formatDate(p.startDate, 'input') || '2026-01-15';
           const formattedTarget = formatDate(p.targetDate || p.targetHandover, 'input') || '2026-12-31';
 
+          const resolvedLoc = resolveProjectCoordinates({
+            mapsUrl: p.mapsUrl,
+            city: p.city,
+            state: p.state,
+            currentLat: Number(p.lat),
+            currentLng: Number(p.lng)
+          });
+
           return {
             ...p,
             code: p.labCode || p.code || p.id,
             labCode: p.labCode || p.code || p.id,
             areaSft: Number(p.areaSft) || 0,
             progress: Number(p.progress) || 0,
-            lat: Number(p.lat) || 17.3850,
-            lng: Number(p.lng) || 78.4867,
-            mapsUrl: p.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${Number(p.lat) || 17.3850},${Number(p.lng) || 78.4867}`,
+            lat: resolvedLoc.lat,
+            lng: resolvedLoc.lng,
+            mapsUrl: resolvedLoc.mapsUrl,
             budgetAllocated: bAlloc,
             budgetSpent: bSpent,
             civilProgress: Number(p.civilProgress) || 0,
@@ -446,8 +455,8 @@ export const api = {
    * 3. updateRecord(sheetName, id, data) (POST):
    * { action: "update", sheetName, id, data }
    */
-  async updateRecord(sheetName: string, id: string, data: any): Promise<{ status: string; message?: string }> {
-    return this.postToScript<{ status: string; message?: string }>({
+  async updateRecord(sheetName: string, id: string, data: any): Promise<{ status: string; message?: string; data?: any }> {
+    return this.postToScript<{ status: string; message?: string; data?: any }>({
       action: 'update',
       sheetName,
       id,

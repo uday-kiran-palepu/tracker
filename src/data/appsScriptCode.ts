@@ -390,6 +390,40 @@ function doPost(e) {
       var data = payload.data;
       if (!sheetName || !data) throw new Error('Missing sheetName or data');
 
+      // Server-side location resolution & short-link expansion for Projects
+      if (sheetName === 'Projects' && data) {
+        if (data.mapsUrl && (data.mapsUrl.indexOf('maps.app.goo.gl') > -1 || data.mapsUrl.indexOf('goo.gl/maps') > -1)) {
+          try {
+            var resp = UrlFetchApp.fetch(data.mapsUrl, { followRedirects: false, muteHttpExceptions: true });
+            var locHeader = resp.getHeaders()['Location'] || resp.getHeaders()['location'];
+            if (locHeader) {
+              data.mapsUrl = locHeader;
+              var match = locHeader.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) ||
+                          locHeader.match(/!3d(-?\d+\.\d+).*?!4d(-?\d+\.\d+)/) ||
+                          locHeader.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+              if (match) {
+                data.lat = parseFloat(match[1]);
+                data.lng = parseFloat(match[2]);
+              }
+            }
+          } catch(err) {}
+        }
+        if ((!data.lat || !data.lng || (Number(data.lat) === 0 && Number(data.lng) === 0)) && (data.city || data.state)) {
+          try {
+            var geoQuery = (data.city || '') + (data.state ? ', ' + data.state : '') + ', India';
+            var geo = Maps.newGeocoder().geocode(geoQuery);
+            if (geo && geo.results && geo.results.length > 0) {
+              var loc = geo.results[0].geometry.location;
+              data.lat = loc.lat;
+              data.lng = loc.lng;
+              if (!data.mapsUrl) {
+                data.mapsUrl = 'https://www.google.com/maps?q=' + loc.lat + ',' + loc.lng;
+              }
+            }
+          } catch(err) {}
+        }
+      }
+
       appendRecordToSheet(ss, sheetName, data);
 
       return ContentService.createTextOutput(JSON.stringify({
@@ -405,6 +439,40 @@ function doPost(e) {
       var id = String(payload.id);
       var data = payload.data;
       if (!sheetName || !id || !data) throw new Error('Missing sheetName, id, or data');
+
+      // Server-side location resolution & short-link expansion for Projects
+      if (sheetName === 'Projects' && data) {
+        if (data.mapsUrl && (data.mapsUrl.indexOf('maps.app.goo.gl') > -1 || data.mapsUrl.indexOf('goo.gl/maps') > -1)) {
+          try {
+            var resp = UrlFetchApp.fetch(data.mapsUrl, { followRedirects: false, muteHttpExceptions: true });
+            var locHeader = resp.getHeaders()['Location'] || resp.getHeaders()['location'];
+            if (locHeader) {
+              data.mapsUrl = locHeader;
+              var match = locHeader.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) ||
+                          locHeader.match(/!3d(-?\d+\.\d+).*?!4d(-?\d+\.\d+)/) ||
+                          locHeader.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+              if (match) {
+                data.lat = parseFloat(match[1]);
+                data.lng = parseFloat(match[2]);
+              }
+            }
+          } catch(err) {}
+        }
+        if ((!data.lat || !data.lng || (Number(data.lat) === 0 && Number(data.lng) === 0)) && (data.city || data.state)) {
+          try {
+            var geoQuery = (data.city || '') + (data.state ? ', ' + data.state : '') + ', India';
+            var geo = Maps.newGeocoder().geocode(geoQuery);
+            if (geo && geo.results && geo.results.length > 0) {
+              var loc = geo.results[0].geometry.location;
+              data.lat = loc.lat;
+              data.lng = loc.lng;
+              if (!data.mapsUrl) {
+                data.mapsUrl = 'https://www.google.com/maps?q=' + loc.lat + ',' + loc.lng;
+              }
+            }
+          } catch(err) {}
+        }
+      }
 
       var sheet = getOrCreateSheet(ss, sheetName);
       var allData = sheet.getDataRange().getValues();
@@ -427,13 +495,15 @@ function doPost(e) {
         sheet.getRange(foundRow, 1, 1, updatedRow.length).setValues([updatedRow]);
         return ContentService.createTextOutput(JSON.stringify({
           status: 'success',
-          message: 'Record updated in ' + sheetName
+          message: 'Record updated in ' + sheetName,
+          data: data
         })).setMimeType(ContentService.MimeType.JSON);
       } else {
         appendRecordToSheet(ss, sheetName, data);
         return ContentService.createTextOutput(JSON.stringify({
           status: 'success',
-          message: 'Record appended (was not found for update)'
+          message: 'Record appended (was not found for update)',
+          data: data
         })).setMimeType(ContentService.MimeType.JSON);
       }
     }

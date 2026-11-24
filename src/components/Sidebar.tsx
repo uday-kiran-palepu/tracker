@@ -108,42 +108,62 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* User / Coordinator Profile Footer */}
       <div className="p-4 border-t border-slate-800 bg-[#070e1c]">
-        <div className="flex items-center gap-3 mb-3">
+        {/* Mobile session banner */}
+        <div className="mb-2.5">
+          <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">
+            Current Session
+          </span>
+          <p className="text-sm font-bold text-white mt-0.5">
+            {isCoordinator ? `Hello, ${currentUser.name} 👋` : 'Guest Visitor'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 mb-3 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
           <img
             src={currentUser.avatar}
             alt={currentUser.name}
-            className="w-10 h-10 rounded-full object-cover border-2 border-slate-700"
+            className="w-10 h-10 rounded-xl object-cover border border-slate-700 shrink-0"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{currentUser.name}</p>
+            <p className="text-xs font-bold text-white truncate">{currentUser.name}</p>
             <div className="flex items-center gap-1 mt-0.5">
               {isCoordinator ? (
-                <span className="whitespace-nowrap shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <ShieldCheck className="w-3 h-3" /> Coordinator
+                <span className="whitespace-nowrap shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <ShieldCheck className="w-3 h-3" /> Project Coordinator
                 </span>
               ) : (
-                <span className="whitespace-nowrap shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                <span className="whitespace-nowrap shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
                   <UserCircle className="w-3 h-3" /> Viewer (Read-Only)
                 </span>
               )}
             </div>
+            <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">
+              {isCoordinator ? 'Full CRUD & Live DB Sync' : 'Public View-Only Access'}
+            </p>
           </div>
         </div>
 
         {isCoordinator ? (
           <button
-            onClick={onLogout}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-slate-800/80 hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 text-xs font-semibold border border-slate-700/60 transition-colors"
+            onClick={() => {
+              onLogout();
+              setMobileOpen(false);
+            }}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-950/40 text-slate-300 hover:text-rose-400 text-xs font-semibold border border-slate-700/60 transition-colors cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out Coordinator</span>
           </button>
         ) : (
           <button
-            onClick={onOpenLogin}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/30 transition-all"
+            onClick={() => {
+              onOpenLogin();
+              setMobileOpen(false);
+            }}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/30 transition-all cursor-pointer"
           >
-            <span>Coordinator Login</span>
+            <LogIn className="w-3.5 h-3.5" />
+            <span>Sign In as Coordinator</span>
           </button>
         )}
       </div>
@@ -164,12 +184,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => setMobileOpen(false)}
         >
           <div
-            className="w-64 h-full relative animate-in slide-in-from-left duration-200 shadow-2xl"
+            className="w-72 max-w-[85vw] h-full relative animate-in slide-in-from-left duration-200 shadow-2xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setMobileOpen(false)}
-              className="absolute top-4 right-4 p-2 rounded-xl bg-slate-800/80 text-slate-300 hover:text-white"
+              className="absolute top-4 right-3.5 p-2 rounded-xl bg-slate-800/80 text-slate-300 hover:text-white cursor-pointer z-10"
               aria-label="Close menu"
             >
               <X className="w-5 h-5" />

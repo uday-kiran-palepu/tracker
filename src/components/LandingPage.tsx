@@ -56,7 +56,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <img
             src="https://raw.githubusercontent.com/uday-kiran-palepu/Website-Images/refs/heads/main/Pen-group-%20photos/KHK.jpeg"
             alt="Pen Group"
-            className="h-10 sm:h-12 w-auto max-w-[180px] sm:max-w-[260px] object-contain rounded bg-white/10 backdrop-blur-md p-1 shadow-md border border-white/10"
+            className="h-9 sm:h-12 w-auto max-w-[135px] sm:max-w-[260px] object-contain rounded bg-white/10 backdrop-blur-md p-1 shadow-md border border-white/10"
           />
         </div>
 
